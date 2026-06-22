@@ -27,6 +27,8 @@ out/
 build
 dist
 
+#AI
+CLAUDE.md
 
 # Debug
 npm-debug.log*
