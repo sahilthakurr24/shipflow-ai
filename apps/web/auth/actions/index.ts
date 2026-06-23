@@ -1,6 +1,6 @@
 "use server";
 
-import { DEFAULT_AUTH_CALLBACK, SIGN_IN_PATH } from "~/utils";
+import { DEFAULT_AUTH_CALLBACK, SIGN_IN_PATH } from "../../utils/index";
 import { auth } from "@repo/auth";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
