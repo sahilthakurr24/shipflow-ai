@@ -42,3 +42,27 @@ export const updatePrdInput = z.object({
 });
 
 export type UpdatePrdInputType = z.infer<typeof updatePrdInput>;
+
+export const createUserStoryInput = z.object({
+  prdId: z.uuid().describe("id of the PRD"),
+  asA: z.string().max(160).optional(),
+  iWant: z.string().optional(),
+  soThat: z.string().optional(),
+  narrative: z.string().optional(),
+  orderIndex: z.number().int().optional(),
+});
+export type CreateUserStoryInputType = z.infer<typeof createUserStoryInput>;
+
+export const listUserStoriesInput = z.object({ prdId: z.uuid().describe("id of the PRD") });
+export type ListUserStoriesInputType = z.infer<typeof listUserStoriesInput>;
+
+export const createAcceptanceCriteriaInput = z.object({
+  prdId: z.uuid().describe("id of the PRD"),
+  userStoryId: z.uuid().optional(),
+  description: z.string().min(1).describe("acceptance criterion"),
+  orderIndex: z.number().int().optional(),
+});
+export type CreateAcceptanceCriteriaInputType = z.infer<typeof createAcceptanceCriteriaInput>;
+
+export const listAcceptanceCriteriaInput = z.object({ prdId: z.uuid().describe("id of the PRD") });
+export type ListAcceptanceCriteriaInputType = z.infer<typeof listAcceptanceCriteriaInput>;

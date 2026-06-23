@@ -1,11 +1,16 @@
 import z from "zod";
-import { pullRequestStateSchema } from "@repo/services/pull-request/model";
+import {
+  pullRequestFileStatusSchema,
+  pullRequestStateSchema,
+} from "@repo/services/pull-request/model";
 
 export {
   createPullRequestInput,
   pullRequestIdInput,
   listPullRequestsInput,
   updatePullRequestInput,
+  addPullRequestFileInput,
+  listPullRequestFilesInput,
 } from "@repo/services/pull-request/model";
 
 export const pullRequestSchema = z.object({
@@ -38,3 +43,20 @@ export const getPullRequestOutput = z.object({ pullRequest: pullRequestSchema.op
 export const listPullRequestsOutput = z.object({ pullRequests: z.array(pullRequestSchema) });
 export const updatePullRequestOutput = z.object({ id: z.string().optional() });
 export const deletePullRequestOutput = z.object({ success: z.boolean() });
+
+export const pullRequestFileSchema = z.object({
+  id: z.string(),
+  pullRequestId: z.string(),
+  filename: z.string(),
+  previousFilename: z.string().nullable(),
+  status: pullRequestFileStatusSchema,
+  additions: z.number(),
+  deletions: z.number(),
+  changes: z.number(),
+  patch: z.string().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export const addPullRequestFileOutput = z.object({ id: z.string() });
+export const listPullRequestFilesOutput = z.object({ files: z.array(pullRequestFileSchema) });

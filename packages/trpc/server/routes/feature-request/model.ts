@@ -1,6 +1,7 @@
 import z from "zod";
 import {
   buildDecisionSchema,
+  clarificationRoleSchema,
   featureRequestPrioritySchema,
   featureRequestSourceSchema,
   featureRequestStatusSchema,
@@ -11,6 +12,8 @@ export {
   featureRequestIdInput,
   listFeatureRequestsInput,
   updateFeatureRequestInput,
+  addClarificationMessageInput,
+  listClarificationMessagesInput,
 } from "@repo/services/feature-request/model";
 
 export const featureRequestSchema = z.object({
@@ -40,3 +43,17 @@ export const listFeatureRequestsOutput = z.object({
 });
 export const updateFeatureRequestOutput = z.object({ id: z.string().optional() });
 export const deleteFeatureRequestOutput = z.object({ success: z.boolean() });
+
+export const clarificationMessageSchema = z.object({
+  id: z.string(),
+  featureRequestId: z.string(),
+  role: clarificationRoleSchema,
+  content: z.string(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export const addClarificationMessageOutput = z.object({ id: z.string() });
+export const listClarificationMessagesOutput = z.object({
+  messages: z.array(clarificationMessageSchema),
+});

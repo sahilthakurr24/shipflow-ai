@@ -1,10 +1,13 @@
 import z from "zod";
 import {
   buildDecisionEnum,
+  clarificationRoleEnum,
   featureRequestSourceEnum,
   featureRequestStatusEnum,
   priorityEnum,
 } from "@repo/database/schema";
+
+export const clarificationRoleSchema = z.enum(clarificationRoleEnum.enumValues);
 
 export const featureRequestSourceSchema = z.enum(featureRequestSourceEnum.enumValues);
 export const featureRequestStatusSchema = z.enum(featureRequestStatusEnum.enumValues);
@@ -50,3 +53,17 @@ export const updateFeatureRequestInput = z.object({
 });
 
 export type UpdateFeatureRequestInputType = z.infer<typeof updateFeatureRequestInput>;
+
+export const addClarificationMessageInput = z.object({
+  featureRequestId: z.uuid().describe("id of the feature request"),
+  role: clarificationRoleSchema,
+  content: z.string().min(1).describe("message content"),
+});
+
+export type AddClarificationMessageInputType = z.infer<typeof addClarificationMessageInput>;
+
+export const listClarificationMessagesInput = z.object({
+  featureRequestId: z.uuid().describe("id of the feature request"),
+});
+
+export type ListClarificationMessagesInputType = z.infer<typeof listClarificationMessagesInput>;

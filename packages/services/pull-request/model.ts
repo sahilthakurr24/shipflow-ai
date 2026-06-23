@@ -1,7 +1,8 @@
 import z from "zod";
-import { pullRequestStateEnum } from "@repo/database/schema";
+import { pullRequestFileStatusEnum, pullRequestStateEnum } from "@repo/database/schema";
 
 export const pullRequestStateSchema = z.enum(pullRequestStateEnum.enumValues);
+export const pullRequestFileStatusSchema = z.enum(pullRequestFileStatusEnum.enumValues);
 
 export const createPullRequestInput = z.object({
   organizationId: z.uuid().describe("id of the organization"),
@@ -47,3 +48,20 @@ export const updatePullRequestInput = z.object({
 });
 
 export type UpdatePullRequestInputType = z.infer<typeof updatePullRequestInput>;
+
+export const addPullRequestFileInput = z.object({
+  pullRequestId: z.uuid().describe("id of the pull request"),
+  filename: z.string().describe("path of the changed file"),
+  status: pullRequestFileStatusSchema,
+  previousFilename: z.string().optional(),
+  additions: z.number().int().optional(),
+  deletions: z.number().int().optional(),
+  changes: z.number().int().optional(),
+  patch: z.string().optional(),
+});
+export type AddPullRequestFileInputType = z.infer<typeof addPullRequestFileInput>;
+
+export const listPullRequestFilesInput = z.object({
+  pullRequestId: z.uuid().describe("id of the pull request"),
+});
+export type ListPullRequestFilesInputType = z.infer<typeof listPullRequestFilesInput>;

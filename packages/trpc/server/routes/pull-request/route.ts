@@ -5,16 +5,22 @@ import { authenticatedProcedure, router } from "../../trpc";
 import { assertOrgAccess } from "../../utils/authz";
 import { generatePath } from "../../utils/path-generator";
 import {
+  addPullRequestFileInput,
+  addPullRequestFileOutput,
   createPullRequestInput,
   createPullRequestOutput,
   deletePullRequestOutput,
   getPullRequestOutput,
+  listPullRequestFilesInput,
+  listPullRequestFilesOutput,
   listPullRequestsInput,
   listPullRequestsOutput,
   pullRequestIdInput,
   updatePullRequestInput,
   updatePullRequestOutput,
 } from "./model";
+
+const FILE_TAGS = ["Pull Request Files"];
 
 const TAGS = ["Pull Requests"];
 const getPath = generatePath("/pull-requests");
@@ -95,5 +101,47 @@ export const pullRequestRouter = router({
       await pullRequestService.deletePullRequest(input);
 
       return { success: true };
+    }),
+
+  addPullRequestFile: authenticatedProcedure
+    .meta({ openapi: { method: "POST", path: getPath("/files"), tags: FILE_TAGS } })
+    .input(addPullRequestFileInput)
+    .output(addPullRequestFileOutput)
+    .mutation(async ({ ctx, input }) => {
+      const { pullRequest } = await pullRequestService.getPullRequestById({
+        id: input.pullRequestId,
+      });
+      if (!pullRequest) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Pull request not found." });
+      }
+
+      await assertOrgAccess(ctx.userId, pullRequest.organizationId);
+      const { id } = await pullRequestService.addPullRequestFile(input);
+
+      if (!id) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to add pull request file.",
+        });
+      }
+
+      return { id };
+    }),
+
+  listPullRequestFiles: authenticatedProcedure
+    .meta({ openapi: { method: "GET", path: getPath("/files"), tags: FILE_TAGS } })
+    .input(listPullRequestFilesInput)
+    .output(listPullRequestFilesOutput)
+    .query(async ({ ctx, input }) => {
+      const { pullRequest } = await pullRequestService.getPullRequestById({
+        id: input.pullRequestId,
+      });
+      if (!pullRequest) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Pull request not found." });
+      }
+
+      await assertOrgAccess(ctx.userId, pullRequest.organizationId);
+
+      return pullRequestService.listPullRequestFiles(input);
     }),
 });

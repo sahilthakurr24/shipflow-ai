@@ -5,16 +5,22 @@ import { authenticatedProcedure, router } from "../../trpc";
 import { assertOrgAccess } from "../../utils/authz";
 import { generatePath } from "../../utils/path-generator";
 import {
+  addClarificationMessageInput,
+  addClarificationMessageOutput,
   createFeatureRequestInput,
   createFeatureRequestOutput,
   deleteFeatureRequestOutput,
   featureRequestIdInput,
   getFeatureRequestOutput,
+  listClarificationMessagesInput,
+  listClarificationMessagesOutput,
   listFeatureRequestsInput,
   listFeatureRequestsOutput,
   updateFeatureRequestInput,
   updateFeatureRequestOutput,
 } from "./model";
+
+const CLARIFICATION_TAGS = ["Feature Request Clarifications"];
 
 const TAGS = ["Feature Requests"];
 const getPath = generatePath("/feature-requests");
@@ -95,5 +101,49 @@ export const featureRequestRouter = router({
       await featureRequestService.deleteFeatureRequest(input);
 
       return { success: true };
+    }),
+
+  addClarificationMessage: authenticatedProcedure
+    .meta({ openapi: { method: "POST", path: getPath("/clarifications"), tags: CLARIFICATION_TAGS } })
+    .input(addClarificationMessageInput)
+    .output(addClarificationMessageOutput)
+    .mutation(async ({ ctx, input }) => {
+      const { featureRequest } = await featureRequestService.getFeatureRequestById({
+        id: input.featureRequestId,
+      });
+
+      if (!featureRequest) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Feature request not found." });
+      }
+
+      await assertOrgAccess(ctx.userId, featureRequest.organizationId);
+      const { id } = await featureRequestService.addClarificationMessage(input);
+
+      if (!id) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to add clarification message.",
+        });
+      }
+
+      return { id };
+    }),
+
+  listClarificationMessages: authenticatedProcedure
+    .meta({ openapi: { method: "GET", path: getPath("/clarifications"), tags: CLARIFICATION_TAGS } })
+    .input(listClarificationMessagesInput)
+    .output(listClarificationMessagesOutput)
+    .query(async ({ ctx, input }) => {
+      const { featureRequest } = await featureRequestService.getFeatureRequestById({
+        id: input.featureRequestId,
+      });
+
+      if (!featureRequest) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Feature request not found." });
+      }
+
+      await assertOrgAccess(ctx.userId, featureRequest.organizationId);
+
+      return featureRequestService.listClarificationMessages(input);
     }),
 });

@@ -1,10 +1,14 @@
 import { db, eq } from "@repo/database";
-import { featureRequestsTable } from "@repo/database/schema";
+import { clarificationMessagesTable, featureRequestsTable } from "@repo/database/schema";
 import {
+  addClarificationMessageInput,
+  AddClarificationMessageInputType,
   createFeatureRequestInput,
   CreateFeatureRequestInputType,
   featureRequestIdInput,
   FeatureRequestIdInputType,
+  listClarificationMessagesInput,
+  ListClarificationMessagesInputType,
   listFeatureRequestsInput,
   ListFeatureRequestsInputType,
   updateFeatureRequestInput,
@@ -61,6 +65,28 @@ class FeatureRequestService {
     const { id } = await featureRequestIdInput.parseAsync(payload);
 
     await db.delete(featureRequestsTable).where(eq(featureRequestsTable.id, id));
+  }
+
+  public async addClarificationMessage(payload: AddClarificationMessageInputType) {
+    const values = await addClarificationMessageInput.parseAsync(payload);
+
+    const [result] = await db
+      .insert(clarificationMessagesTable)
+      .values(values)
+      .returning({ id: clarificationMessagesTable.id });
+
+    return { id: result?.id };
+  }
+
+  public async listClarificationMessages(payload: ListClarificationMessagesInputType) {
+    const { featureRequestId } = await listClarificationMessagesInput.parseAsync(payload);
+
+    const messages = await db
+      .select()
+      .from(clarificationMessagesTable)
+      .where(eq(clarificationMessagesTable.featureRequestId, featureRequestId));
+
+    return { messages };
   }
 }
 

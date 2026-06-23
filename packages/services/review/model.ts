@@ -1,9 +1,19 @@
 import z from "zod";
-import { reviewStatusEnum, reviewTriggerEnum, reviewVerdictEnum } from "@repo/database/schema";
+import {
+  issueCategoryEnum,
+  issueSeverityEnum,
+  issueStatusEnum,
+  reviewStatusEnum,
+  reviewTriggerEnum,
+  reviewVerdictEnum,
+} from "@repo/database/schema";
 
 export const reviewTriggerSchema = z.enum(reviewTriggerEnum.enumValues);
 export const reviewStatusSchema = z.enum(reviewStatusEnum.enumValues);
 export const reviewVerdictSchema = z.enum(reviewVerdictEnum.enumValues);
+export const issueSeveritySchema = z.enum(issueSeverityEnum.enumValues);
+export const issueCategorySchema = z.enum(issueCategoryEnum.enumValues);
+export const issueStatusSchema = z.enum(issueStatusEnum.enumValues);
 
 export const createReviewInput = z.object({
   organizationId: z.uuid().describe("id of the organization"),
@@ -39,3 +49,31 @@ export const updateReviewInput = z.object({
 });
 
 export type UpdateReviewInputType = z.infer<typeof updateReviewInput>;
+
+export const createReviewIssueInput = z.object({
+  reviewId: z.uuid().describe("id of the review"),
+  severity: issueSeveritySchema,
+  category: issueCategorySchema,
+  title: z.string().max(300).describe("short title of the issue"),
+  description: z.string().describe("what the issue is"),
+  rationale: z.string().optional(),
+  suggestion: z.string().optional(),
+  filePath: z.string().optional(),
+  lineStart: z.number().int().optional(),
+  lineEnd: z.number().int().optional(),
+  acceptanceCriteriaId: z.uuid().optional(),
+  taskId: z.uuid().optional(),
+});
+export type CreateReviewIssueInputType = z.infer<typeof createReviewIssueInput>;
+
+export const listReviewIssuesInput = z.object({ reviewId: z.uuid().describe("id of the review") });
+export type ListReviewIssuesInputType = z.infer<typeof listReviewIssuesInput>;
+
+export const reviewIssueIdInput = z.object({ id: z.uuid().describe("id of the review issue") });
+export type ReviewIssueIdInputType = z.infer<typeof reviewIssueIdInput>;
+
+export const updateReviewIssueStatusInput = z.object({
+  id: z.uuid().describe("id of the review issue"),
+  status: issueStatusSchema,
+});
+export type UpdateReviewIssueStatusInputType = z.infer<typeof updateReviewIssueStatusInput>;

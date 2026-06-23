@@ -1,8 +1,12 @@
 import { db, and, eq } from "@repo/database";
-import { pullRequestsTable } from "@repo/database/schema";
+import { pullRequestFilesTable, pullRequestsTable } from "@repo/database/schema";
 import {
+  addPullRequestFileInput,
+  AddPullRequestFileInputType,
   createPullRequestInput,
   CreatePullRequestInputType,
+  listPullRequestFilesInput,
+  ListPullRequestFilesInputType,
   listPullRequestsInput,
   ListPullRequestsInputType,
   pullRequestIdInput,
@@ -64,6 +68,28 @@ class PullRequestService {
     const { id } = await pullRequestIdInput.parseAsync(payload);
 
     await db.delete(pullRequestsTable).where(eq(pullRequestsTable.id, id));
+  }
+
+  public async addPullRequestFile(payload: AddPullRequestFileInputType) {
+    const values = await addPullRequestFileInput.parseAsync(payload);
+
+    const [result] = await db
+      .insert(pullRequestFilesTable)
+      .values(values)
+      .returning({ id: pullRequestFilesTable.id });
+
+    return { id: result?.id };
+  }
+
+  public async listPullRequestFiles(payload: ListPullRequestFilesInputType) {
+    const { pullRequestId } = await listPullRequestFilesInput.parseAsync(payload);
+
+    const files = await db
+      .select()
+      .from(pullRequestFilesTable)
+      .where(eq(pullRequestFilesTable.pullRequestId, pullRequestId));
+
+    return { files };
   }
 }
 
