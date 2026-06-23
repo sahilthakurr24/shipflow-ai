@@ -1,5 +1,6 @@
-import { betterAuth } from "better-auth";
+import { betterAuth, github, socialProviders } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { nextCookies } from "better-auth/next-js";
 import { db } from "@repo/database";
 import {
   usersTable,
@@ -8,7 +9,6 @@ import {
   verificationsTable,
 } from "@repo/database/schema";
 import { env } from "./env";
-
 
 export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
@@ -37,4 +37,11 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
+  socialProviders: {
+    github: {
+      clientId: env.GITHUB_CLIENT_ID,
+      clientSecret: env.GITHUB_CLIENT_SECRET,
+    },
+  },
+  plugins: [nextCookies()],
 });
