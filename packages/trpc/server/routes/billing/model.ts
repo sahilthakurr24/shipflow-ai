@@ -1,0 +1,62 @@
+import z from "zod";
+import {
+  billingOrganizationInput,
+  paymentStatusSchema,
+  planTierSchema,
+  subscriptionStatusSchema,
+  usageMetricSchema,
+} from "@repo/services/billing/model";
+
+export { billingOrganizationInput };
+
+const jsonObject = z.record(z.string(), z.unknown());
+
+export const subscriptionSchema = z.object({
+  id: z.string(),
+  organizationId: z.string(),
+  plan: planTierSchema,
+  status: subscriptionStatusSchema,
+  razorpayCustomerId: z.string().nullable(),
+  razorpaySubscriptionId: z.string().nullable(),
+  razorpayPlanId: z.string().nullable(),
+  seats: z.number(),
+  repositoryLimit: z.number(),
+  aiReviewCreditsTotal: z.number(),
+  aiReviewCreditsUsed: z.number(),
+  currentPeriodStart: z.date().nullable(),
+  currentPeriodEnd: z.date().nullable(),
+  cancelAtPeriodEnd: z.boolean(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export const paymentSchema = z.object({
+  id: z.string(),
+  organizationId: z.string(),
+  subscriptionId: z.string().nullable(),
+  razorpayPaymentId: z.string().nullable(),
+  razorpayOrderId: z.string().nullable(),
+  amount: z.number(),
+  currency: z.string(),
+  status: paymentStatusSchema,
+  method: z.string().nullable(),
+  description: z.string().nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export const usageRecordSchema = z.object({
+  id: z.string(),
+  organizationId: z.string(),
+  metric: usageMetricSchema,
+  quantity: z.number(),
+  featureRequestId: z.string().nullable(),
+  reviewId: z.string().nullable(),
+  metadata: jsonObject.nullable(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+
+export const getSubscriptionOutput = z.object({ subscription: subscriptionSchema.optional() });
+export const listPaymentsOutput = z.object({ payments: z.array(paymentSchema) });
+export const listUsageRecordsOutput = z.object({ usageRecords: z.array(usageRecordSchema) });
