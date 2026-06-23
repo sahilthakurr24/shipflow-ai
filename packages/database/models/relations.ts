@@ -1,6 +1,7 @@
 import { relations } from "drizzle-orm";
 
 import { approvalsTable } from "./approval";
+import { accountsTable, sessionsTable } from "./auth";
 import { paymentsTable, subscriptionsTable, usageRecordsTable } from "./billing";
 import { clarificationMessagesTable, featureRequestsTable } from "./feature-request";
 import { membershipsTable, organizationsTable } from "./organization";
@@ -22,6 +23,22 @@ import { workflowRunsTable } from "./workflow";
 
 export const usersRelations = relations(usersTable, ({ many }) => ({
   memberships: many(membershipsTable),
+  sessions: many(sessionsTable),
+  accounts: many(accountsTable),
+}));
+
+export const sessionsRelations = relations(sessionsTable, ({ one }) => ({
+  user: one(usersTable, {
+    fields: [sessionsTable.userId],
+    references: [usersTable.id],
+  }),
+}));
+
+export const accountsRelations = relations(accountsTable, ({ one }) => ({
+  user: one(usersTable, {
+    fields: [accountsTable.userId],
+    references: [usersTable.id],
+  }),
 }));
 
 export const organizationsRelations = relations(organizationsTable, ({ many, one }) => ({

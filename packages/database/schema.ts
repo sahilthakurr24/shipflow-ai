@@ -3,6 +3,7 @@ export * from "./models/enums";
 
 // Tenancy & identity
 export * from "./models/user";
+export * from "./models/auth";
 export * from "./models/organization";
 
 // Product structure
