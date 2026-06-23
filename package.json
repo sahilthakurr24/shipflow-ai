@@ -2,6 +2,7 @@
   "name": "trpc-monorepo",
   "private": true,
   "scripts": {
+    "env:link": "rm -f apps/*/.env packages/*/.env && bash setup.sh",
     "build": "dotenv -- turbo build",
     "dev": "dotenv -- turbo dev",
     "db:generate": "dotenv -- turbo db:generate",
