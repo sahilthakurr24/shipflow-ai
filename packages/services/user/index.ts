@@ -38,7 +38,7 @@ class UserService {
 
     const [result] = await db.select().from(usersTable).where(eq(usersTable.id, id));
 
-    return result;
+    return { user: result };
   }
 
   public async getUserByEmail(payload: UserEmailInputType) {
@@ -46,7 +46,7 @@ class UserService {
 
     const [result] = await db.select().from(usersTable).where(eq(usersTable.email, email));
 
-    return result;
+    return { user: result };
   }
 
   public async updateUser(payload: UpdateUserInputType) {
@@ -58,7 +58,7 @@ class UserService {
       .where(eq(usersTable.id, id))
       .returning({ id: usersTable.id });
 
-    return result?.id;
+    return { id: result?.id };
   }
 
   public async deleteUser(payload: UserIdInputType) {

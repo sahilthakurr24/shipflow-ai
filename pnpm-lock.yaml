@@ -426,6 +426,9 @@ importers:
 
   packages/trpc:
     dependencies:
+      '@repo/auth':
+        specifier: workspace:*
+        version: link:../auth
       '@repo/services':
         specifier: workspace:*
         version: link:../services
@@ -448,6 +451,9 @@ importers:
       '@repo/typescript-config':
         specifier: workspace:*
         version: link:../typescript-config
+      '@types/node':
+        specifier: ^22.15.3
+        version: 22.15.3
       dotenv-cli:
         specifier: ^11.0.0
         version: 11.0.0
