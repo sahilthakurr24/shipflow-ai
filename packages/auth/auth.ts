@@ -9,6 +9,7 @@ import {
 } from "@repo/database/schema";
 import { env } from "./env";
 
+
 export const auth = betterAuth({
   secret: env.BETTER_AUTH_SECRET,
   database: drizzleAdapter(db, {
