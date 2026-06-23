@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { SIGN_IN_PATH } from "~/utils";
+import { SIGN_IN_PATH } from "./utils/index";
 
 const SESSION_COOKIE = "better-auth.session_token";
 const SECURE_SESSION_COOKIE = "__Secure-better-auth.session_token";

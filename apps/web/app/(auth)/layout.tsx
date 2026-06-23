@@ -1,5 +1,5 @@
 import React from "react";
-import { requiredUnAuth } from "~/auth/actions";
+import { requiredUnAuth } from "../../auth/actions/index";
 
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {
   await requiredUnAuth();
