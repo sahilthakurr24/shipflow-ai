@@ -17,7 +17,9 @@ type FeatureRequest = {
 
 function buildPrompt(featureRequest: FeatureRequest, messages: ClarificationMessage[]) {
   const transcript = messages.length
-    ? messages.map((m) => `${m.role === "agent" ? "Analyst" : "Requester"}: ${m.content}`).join("\n")
+    ? messages
+        .map((m) => `${m.role === "agent" ? "Analyst" : "Requester"}: ${m.content}`)
+        .join("\n")
     : "(no clarifying questions were needed)";
 
   return `Feature request:
