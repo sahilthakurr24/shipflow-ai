@@ -5,7 +5,7 @@ import cors from "cors";
 import * as trpcExpress from "@trpc/server/adapters/express";
 import { generateOpenApiDocument, createOpenApiExpressMiddleware } from "trpc-to-openapi";
 import { apiReference } from "@scalar/express-api-reference";
-import { inngest, serve, helloWorld } from "@repo/inngest";
+import { inngest, serve, functions } from "@repo/inngest";
 
 import { serverRouter, createContext } from "@repo/trpc/server";
 
@@ -27,7 +27,7 @@ if (env.NODE_ENV !== "prod") {
 }
 
 app.use(express.json());
-app.use("/api/inngest", serve({ client: inngest, functions: [helloWorld] }));
+app.use("/api/inngest", serve({ client: inngest, functions }));
 
 app.get("/", (req, res) => {
   return res.json({ message: "ShipFlow AI is up and running..." });

@@ -10,6 +10,8 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@inngest/agent-kit": "^0.13.2",
+    "@repo/services": "workspace:*",
     "@repo/database": "workspace:*",
     "inngest": "^4.11.0",
     "zod": "^4.3.5"

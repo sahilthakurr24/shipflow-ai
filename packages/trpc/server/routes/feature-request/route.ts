@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import { inngest } from "@repo/inngest";
 
 import { featureRequestService } from "../../services";
 import { authenticatedProcedure, router } from "../../trpc";
@@ -42,6 +43,11 @@ export const featureRequestRouter = router({
           message: "Failed to create feature request.",
         });
       }
+
+      await inngest.send({
+        name: "feature-request/created",
+        data: { featureRequestId: id, organizationId: input.organizationId },
+      });
 
       return { id };
     }),
@@ -123,6 +129,13 @@ export const featureRequestRouter = router({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Failed to add clarification message.",
+        });
+      }
+
+      if (input.role === "user") {
+        await inngest.send({
+          name: "feature-request/clarification.replied",
+          data: { featureRequestId: input.featureRequestId },
         });
       }
 
