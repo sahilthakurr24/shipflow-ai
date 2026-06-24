@@ -22,7 +22,11 @@ type UserStory = {
 };
 type AcceptanceCriterion = { description: string; userStoryId: string | null };
 
-function buildPrompt(prd: Prd, userStories: UserStory[], acceptanceCriteria: AcceptanceCriterion[]) {
+function buildPrompt(
+  prd: Prd,
+  userStories: UserStory[],
+  acceptanceCriteria: AcceptanceCriterion[],
+) {
   const storiesText = userStories.length
     ? userStories
         .map(

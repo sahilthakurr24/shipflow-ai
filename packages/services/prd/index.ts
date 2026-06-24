@@ -1,6 +1,8 @@
 import { db, and, eq } from "@repo/database";
 import { acceptanceCriteriaTable, prdsTable, userStoriesTable } from "@repo/database/schema";
 import {
+  approvePrdInput,
+  ApprovePrdInputType,
   createAcceptanceCriteriaInput,
   CreateAcceptanceCriteriaInputType,
   createPrdInput,
@@ -56,6 +58,18 @@ class PrdService {
     const [result] = await db
       .update(prdsTable)
       .set(fields)
+      .where(eq(prdsTable.id, id))
+      .returning({ id: prdsTable.id });
+
+    return { id: result?.id };
+  }
+
+  public async approvePrd(payload: ApprovePrdInputType) {
+    const { id, approvedByUserId } = await approvePrdInput.parseAsync(payload);
+
+    const [result] = await db
+      .update(prdsTable)
+      .set({ status: "approved", approvedByUserId, approvedAt: new Date() })
       .where(eq(prdsTable.id, id))
       .returning({ id: prdsTable.id });
 

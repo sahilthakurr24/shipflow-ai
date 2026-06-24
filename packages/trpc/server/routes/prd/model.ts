@@ -38,6 +38,7 @@ export const createPrdOutput = z.object({ id: z.string() });
 export const getPrdOutput = z.object({ prd: prdSchema.optional() });
 export const listPrdsOutput = z.object({ prds: z.array(prdSchema) });
 export const updatePrdOutput = z.object({ id: z.string().optional() });
+export const approvePrdOutput = z.object({ id: z.string() });
 export const deletePrdOutput = z.object({ success: z.boolean() });
 
 export const userStorySchema = z.object({

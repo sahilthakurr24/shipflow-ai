@@ -1,10 +1,12 @@
 import { TRPCError } from "@trpc/server";
+import { inngest } from "@repo/inngest";
 
 import { prdService } from "../../services";
 import { authenticatedProcedure, router } from "../../trpc";
 import { assertOrgAccess } from "../../utils/authz";
 import { generatePath } from "../../utils/path-generator";
 import {
+  approvePrdOutput,
   createAcceptanceCriteriaInput,
   createAcceptanceCriteriaOutput,
   createPrdInput,
@@ -102,6 +104,36 @@ export const prdRouter = router({
       await prdService.deletePrd(input);
 
       return { success: true };
+    }),
+
+  approvePrd: authenticatedProcedure
+    .meta({ openapi: { method: "POST", path: getPath("/approve"), tags: TAGS } })
+    .input(prdIdInput)
+    .output(approvePrdOutput)
+    .mutation(async ({ ctx, input }) => {
+      const { prd } = await prdService.getPrdById(input);
+
+      if (!prd) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "PRD not found." });
+      }
+
+      await assertOrgAccess(ctx.userId, prd.organizationId, MANAGE_ROLES);
+      const { id } = await prdService.approvePrd({ id: prd.id, approvedByUserId: ctx.userId });
+
+      if (!id) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to approve PRD." });
+      }
+
+      await inngest.send({
+        name: "prd/tasks.requested",
+        data: {
+          prdId: id,
+          organizationId: prd.organizationId,
+          featureRequestId: prd.featureRequestId,
+        },
+      });
+
+      return { id };
     }),
 
   createUserStory: authenticatedProcedure

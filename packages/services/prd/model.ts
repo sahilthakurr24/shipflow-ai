@@ -43,6 +43,12 @@ export const updatePrdInput = z.object({
 
 export type UpdatePrdInputType = z.infer<typeof updatePrdInput>;
 
+export const approvePrdInput = z.object({
+  id: z.uuid().describe("id of the PRD"),
+  approvedByUserId: z.uuid().describe("id of the approving user"),
+});
+export type ApprovePrdInputType = z.infer<typeof approvePrdInput>;
+
 export const createUserStoryInput = z.object({
   prdId: z.uuid().describe("id of the PRD"),
   asA: z.string().max(160).optional(),
