@@ -39,3 +39,22 @@ export const updateRepositoryInput = z.object({
 });
 
 export type UpdateRepositoryInputType = z.infer<typeof updateRepositoryInput>;
+
+export const upsertFromInstallationInput = z.object({
+  organizationId: z.uuid().describe("id of the organization"),
+  githubInstallationId: z.string().max(64).describe("GitHub App installation id"),
+  connectedByUserId: z.uuid().optional(),
+  repositories: z.array(
+    z.object({
+      githubRepoId: z.string().max(64),
+      owner: z.string().max(255),
+      name: z.string().max(255),
+      fullName: z.string().max(512),
+      defaultBranch: z.string().max(255),
+      isPrivate: z.boolean(),
+      htmlUrl: z.string().nullable(),
+    }),
+  ),
+});
+
+export type UpsertFromInstallationInputType = z.infer<typeof upsertFromInstallationInput>;

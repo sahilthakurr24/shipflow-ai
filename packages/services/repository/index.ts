@@ -1,4 +1,4 @@
-import { db, eq } from "@repo/database";
+import { db, eq, sql } from "@repo/database";
 import { repositoriesTable } from "@repo/database/schema";
 import {
   createRepositoryInput,
@@ -9,6 +9,8 @@ import {
   RepositoryIdInputType,
   updateRepositoryInput,
   UpdateRepositoryInputType,
+  upsertFromInstallationInput,
+  UpsertFromInstallationInputType,
 } from "./model";
 
 class RepositoryService {
@@ -58,6 +60,39 @@ class RepositoryService {
     const { id } = await repositoryIdInput.parseAsync(payload);
 
     await db.delete(repositoriesTable).where(eq(repositoriesTable.id, id));
+  }
+
+  /** Upsert the repositories granted to a GitHub App installation. */
+  public async upsertFromInstallation(payload: UpsertFromInstallationInputType) {
+    const { organizationId, githubInstallationId, connectedByUserId, repositories } =
+      await upsertFromInstallationInput.parseAsync(payload);
+
+    if (repositories.length === 0) return { count: 0 };
+
+    const rows = repositories.map((repo) => ({
+      ...repo,
+      organizationId,
+      githubInstallationId,
+      connectedByUserId,
+    }));
+
+    await db
+      .insert(repositoriesTable)
+      .values(rows)
+      .onConflictDoUpdate({
+        target: [repositoriesTable.organizationId, repositoriesTable.githubRepoId],
+        set: {
+          githubInstallationId: sql`excluded.github_installation_id`,
+          owner: sql`excluded.owner`,
+          name: sql`excluded.name`,
+          fullName: sql`excluded.full_name`,
+          defaultBranch: sql`excluded.default_branch`,
+          isPrivate: sql`excluded.is_private`,
+          htmlUrl: sql`excluded.html_url`,
+        },
+      });
+
+    return { count: rows.length };
   }
 }
 

@@ -1,13 +1,17 @@
 import { TRPCError } from "@trpc/server";
 
-import { repositoryService } from "../../services";
+import { githubService, repositoryService } from "../../services";
 import { authenticatedProcedure, router } from "../../trpc";
 import { assertOrgAccess } from "../../utils/authz";
 import { generatePath } from "../../utils/path-generator";
 import {
+  completeGithubInstallationInput,
+  completeGithubInstallationOutput,
   createRepositoryInput,
   createRepositoryOutput,
   deleteRepositoryOutput,
+  getInstallUrlInput,
+  getInstallUrlOutput,
   getRepositoryOutput,
   listRepositoriesInput,
   listRepositoriesOutput,
@@ -48,6 +52,35 @@ export const repositoryRouter = router({
       await assertOrgAccess(ctx.userId, input.organizationId);
 
       return repositoryService.listRepositories(input);
+    }),
+
+  getGithubInstallUrl: authenticatedProcedure
+    .meta({ openapi: { method: "GET", path: getPath("/install-url"), tags: TAGS } })
+    .input(getInstallUrlInput)
+    .output(getInstallUrlOutput)
+    .query(async ({ ctx, input }) => {
+      await assertOrgAccess(ctx.userId, input.organizationId, MANAGE_ROLES);
+
+      return githubService.getInstallUrl(input);
+    }),
+
+  completeGithubInstallation: authenticatedProcedure
+    .meta({ openapi: { method: "POST", path: getPath("/install/complete"), tags: TAGS } })
+    .input(completeGithubInstallationInput)
+    .output(completeGithubInstallationOutput)
+    .mutation(async ({ ctx, input }) => {
+      await assertOrgAccess(ctx.userId, input.organizationId, MANAGE_ROLES);
+
+      const { repositories } = await githubService.listInstallationRepositories({
+        installationId: input.installationId,
+      });
+
+      return repositoryService.upsertFromInstallation({
+        organizationId: input.organizationId,
+        githubInstallationId: input.installationId,
+        connectedByUserId: ctx.userId,
+        repositories,
+      });
     }),
 
   getRepositoryById: authenticatedProcedure
