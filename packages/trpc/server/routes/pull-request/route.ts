@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import { inngest } from "@repo/inngest";
 
 import { pullRequestService } from "../../services";
 import { authenticatedProcedure, router } from "../../trpc";
@@ -16,6 +17,7 @@ import {
   listPullRequestsInput,
   listPullRequestsOutput,
   pullRequestIdInput,
+  requestReviewOutput,
   updatePullRequestInput,
   updatePullRequestOutput,
 } from "./model";
@@ -99,6 +101,27 @@ export const pullRequestRouter = router({
 
       await assertOrgAccess(ctx.userId, pullRequest.organizationId, MANAGE_ROLES);
       await pullRequestService.deletePullRequest(input);
+
+      return { success: true };
+    }),
+
+  requestReview: authenticatedProcedure
+    .meta({ openapi: { method: "POST", path: getPath("/request-review"), tags: TAGS } })
+    .input(pullRequestIdInput)
+    .output(requestReviewOutput)
+    .mutation(async ({ ctx, input }) => {
+      const { pullRequest } = await pullRequestService.getPullRequestById(input);
+
+      if (!pullRequest) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Pull request not found." });
+      }
+
+      await assertOrgAccess(ctx.userId, pullRequest.organizationId);
+
+      await inngest.send({
+        name: "pull-request/review.requested",
+        data: { pullRequestId: pullRequest.id, organizationId: pullRequest.organizationId },
+      });
 
       return { success: true };
     }),

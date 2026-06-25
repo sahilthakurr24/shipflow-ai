@@ -42,6 +42,7 @@ export const createPullRequestOutput = z.object({ id: z.string() });
 export const getPullRequestOutput = z.object({ pullRequest: pullRequestSchema.optional() });
 export const listPullRequestsOutput = z.object({ pullRequests: z.array(pullRequestSchema) });
 export const updatePullRequestOutput = z.object({ id: z.string().optional() });
+export const requestReviewOutput = z.object({ success: z.boolean() });
 export const deletePullRequestOutput = z.object({ success: z.boolean() });
 
 export const pullRequestFileSchema = z.object({
