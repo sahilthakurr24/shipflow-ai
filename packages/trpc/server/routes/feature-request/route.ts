@@ -81,7 +81,9 @@ export const featureRequestRouter = router({
     .input(updateFeatureRequestInput)
     .output(updateFeatureRequestOutput)
     .mutation(async ({ ctx, input }) => {
-      const { featureRequest } = await featureRequestService.getFeatureRequestById({ id: input.id });
+      const { featureRequest } = await featureRequestService.getFeatureRequestById({
+        id: input.id,
+      });
 
       if (!featureRequest) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Feature request not found." });
@@ -110,7 +112,9 @@ export const featureRequestRouter = router({
     }),
 
   addClarificationMessage: authenticatedProcedure
-    .meta({ openapi: { method: "POST", path: getPath("/clarifications"), tags: CLARIFICATION_TAGS } })
+    .meta({
+      openapi: { method: "POST", path: getPath("/clarifications"), tags: CLARIFICATION_TAGS },
+    })
     .input(addClarificationMessageInput)
     .output(addClarificationMessageOutput)
     .mutation(async ({ ctx, input }) => {
@@ -143,7 +147,9 @@ export const featureRequestRouter = router({
     }),
 
   listClarificationMessages: authenticatedProcedure
-    .meta({ openapi: { method: "GET", path: getPath("/clarifications"), tags: CLARIFICATION_TAGS } })
+    .meta({
+      openapi: { method: "GET", path: getPath("/clarifications"), tags: CLARIFICATION_TAGS },
+    })
     .input(listClarificationMessagesInput)
     .output(listClarificationMessagesOutput)
     .query(async ({ ctx, input }) => {

@@ -96,10 +96,7 @@ class ReviewService {
   public async getReviewIssueById(payload: ReviewIssueIdInputType) {
     const { id } = await reviewIssueIdInput.parseAsync(payload);
 
-    const [result] = await db
-      .select()
-      .from(reviewIssuesTable)
-      .where(eq(reviewIssuesTable.id, id));
+    const [result] = await db.select().from(reviewIssuesTable).where(eq(reviewIssuesTable.id, id));
 
     return { issue: result };
   }

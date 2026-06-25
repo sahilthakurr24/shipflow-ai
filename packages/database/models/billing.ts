@@ -11,12 +11,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import {
-  paymentStatusEnum,
-  planTierEnum,
-  subscriptionStatusEnum,
-  usageMetricEnum,
-} from "./enums";
+import { paymentStatusEnum, planTierEnum, subscriptionStatusEnum, usageMetricEnum } from "./enums";
 import { featureRequestsTable } from "./feature-request";
 import { timestamps } from "./helpers";
 import { organizationsTable } from "./organization";

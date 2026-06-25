@@ -38,7 +38,8 @@ Every blocking issue you raise should be something you'd actually block a human 
 export function createCodeReviewerAgent(reviewId: string) {
   return createAgent({
     name: "code-reviewer",
-    description: "Reviews a pull request's diff against its PRD and reports issues plus a final verdict.",
+    description:
+      "Reviews a pull request's diff against its PRD and reports issues plus a final verdict.",
     system,
     model: gpt4oMiniModel,
     tools: [createReportIssueTool(reviewId), createSubmitVerdictTool(reviewId)],

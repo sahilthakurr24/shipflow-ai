@@ -26,10 +26,7 @@ class RepositoryService {
   public async getRepositoryById(payload: RepositoryIdInputType) {
     const { id } = await repositoryIdInput.parseAsync(payload);
 
-    const [result] = await db
-      .select()
-      .from(repositoriesTable)
-      .where(eq(repositoriesTable.id, id));
+    const [result] = await db.select().from(repositoriesTable).where(eq(repositoriesTable.id, id));
 
     return { repository: result };
   }

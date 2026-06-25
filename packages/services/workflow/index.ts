@@ -27,10 +27,7 @@ class WorkflowService {
   public async getWorkflowRunById(payload: WorkflowRunIdInputType) {
     const { id } = await workflowRunIdInput.parseAsync(payload);
 
-    const [result] = await db
-      .select()
-      .from(workflowRunsTable)
-      .where(eq(workflowRunsTable.id, id));
+    const [result] = await db.select().from(workflowRunsTable).where(eq(workflowRunsTable.id, id));
 
     return { workflowRun: result };
   }

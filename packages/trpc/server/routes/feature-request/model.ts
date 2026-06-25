@@ -37,7 +37,9 @@ export const featureRequestSchema = z.object({
 });
 
 export const createFeatureRequestOutput = z.object({ id: z.string() });
-export const getFeatureRequestOutput = z.object({ featureRequest: featureRequestSchema.optional() });
+export const getFeatureRequestOutput = z.object({
+  featureRequest: featureRequestSchema.optional(),
+});
 export const listFeatureRequestsOutput = z.object({
   featureRequests: z.array(featureRequestSchema),
 });

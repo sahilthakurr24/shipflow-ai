@@ -14,7 +14,9 @@ export function createCreatePrdTool(params: { organizationId: string; featureReq
       problemStatement: z
         .string()
         .min(1)
-        .describe("The underlying user/business problem in 2-4 sentences — the WHY, not a restatement of the request"),
+        .describe(
+          "The underlying user/business problem in 2-4 sentences — the WHY, not a restatement of the request",
+        ),
       goals: stringArray.describe("2-5 bullet outcomes that define success"),
       nonGoals: stringArray.describe("Explicitly what is OUT of scope for this iteration"),
       edgeCases: stringArray.describe(
@@ -47,10 +49,17 @@ export function createAddUserStoryTool() {
     description:
       "Add a user story to the PRD created by create_prd. Call once per distinct user-facing capability.",
     parameters: z.object({
-      asA: z.string().max(160).optional().describe("The role of the user, e.g. 'a logged-in admin'"),
+      asA: z
+        .string()
+        .max(160)
+        .optional()
+        .describe("The role of the user, e.g. 'a logged-in admin'"),
       iWant: z.string().optional().describe("The capability they want"),
       soThat: z.string().optional().describe("The benefit they get from it"),
-      narrative: z.string().optional().describe("Freeform narrative, if asA/iWant/soThat don't fit"),
+      narrative: z
+        .string()
+        .optional()
+        .describe("Freeform narrative, if asA/iWant/soThat don't fit"),
       orderIndex: z
         .number()
         .int()
@@ -78,11 +87,15 @@ export function createAddAcceptanceCriteriaTool() {
       description: z
         .string()
         .min(1)
-        .describe("A testable, pass/fail condition that must hold for the feature to be considered done"),
+        .describe(
+          "A testable, pass/fail condition that must hold for the feature to be considered done",
+        ),
       userStoryId: z
         .uuid()
         .optional()
-        .describe("The user story this criterion verifies, when there is a clear one-to-one mapping"),
+        .describe(
+          "The user story this criterion verifies, when there is a clear one-to-one mapping",
+        ),
       orderIndex: z.number().int().optional(),
     }),
     handler: async (input, { network, step }) => {

@@ -31,7 +31,10 @@ export const releaseRouter = router({
       const { id } = await releaseService.createRelease(input);
 
       if (!id) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create release." });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to create release.",
+        });
       }
 
       return { id };

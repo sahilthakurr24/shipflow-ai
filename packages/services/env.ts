@@ -4,6 +4,12 @@ const envSchema = z.object({
   GOOGLE_OAUTH_CLIENT_ID: z.string().optional(),
   GOOGLE_OAUTH_CLIENT_SECRET: z.string().optional(),
   GOOGLE_OAUTH_REDIRECT_URI: z.string().optional(),
+  GITHUB_APP_ID: z.string().describe("GitHub App id"),
+  GITHUB_APP_NAME: z.string().describe("GitHub App slug, used to build the install URL"),
+  GITHUB_APP_PRIVATE_KEY: z
+    .string()
+    .describe("GitHub App private key (PEM, newlines escaped as \\n)"),
+  GITHUB_WEBHOOK_SECRET: z.string().describe("Secret used to verify inbound GitHub webhooks"),
 });
 
 function createEnv(env: NodeJS.ProcessEnv) {

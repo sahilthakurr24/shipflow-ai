@@ -148,7 +148,10 @@ export const prdRouter = router({
       const { id } = await prdService.createUserStory(input);
 
       if (!id) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create user story." });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to create user story.",
+        });
       }
 
       return { id };

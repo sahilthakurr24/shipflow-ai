@@ -25,7 +25,10 @@ export const sessionsTable = pgTable(
     userAgent: text("user_agent"),
     ...timestamps,
   },
-  (t) => [uniqueIndex("sessions_token_unique").on(t.token), index("sessions_user_idx").on(t.userId)],
+  (t) => [
+    uniqueIndex("sessions_token_unique").on(t.token),
+    index("sessions_user_idx").on(t.userId),
+  ],
 );
 
 /**

@@ -1,6 +1,10 @@
 import { createAgent } from "@inngest/agent-kit";
 import { gpt4oMiniModel } from "../models";
-import { createAddAcceptanceCriteriaTool, createAddUserStoryTool, createCreatePrdTool } from "../tools/prd-tools";
+import {
+  createAddAcceptanceCriteriaTool,
+  createAddUserStoryTool,
+  createCreatePrdTool,
+} from "../tools/prd-tools";
 
 const system = `You are the PRD Writer for ShipFlow AI. You turn a clarified feature request into a Product
 Requirements Document precise enough for an engineer to plan tasks from without talking to you
@@ -37,9 +41,14 @@ written — do not ask questions, you only have the clarification transcript to 
 export function createPrdWriterAgent(params: { organizationId: string; featureRequestId: string }) {
   return createAgent({
     name: "prd-writer",
-    description: "Turns a clarified feature request into a PRD with user stories and acceptance criteria.",
+    description:
+      "Turns a clarified feature request into a PRD with user stories and acceptance criteria.",
     system,
     model: gpt4oMiniModel,
-    tools: [createCreatePrdTool(params), createAddUserStoryTool(), createAddAcceptanceCriteriaTool()],
+    tools: [
+      createCreatePrdTool(params),
+      createAddUserStoryTool(),
+      createAddAcceptanceCriteriaTool(),
+    ],
   });
 }

@@ -30,10 +30,7 @@ class PullRequestService {
   public async getPullRequestById(payload: PullRequestIdInputType) {
     const { id } = await pullRequestIdInput.parseAsync(payload);
 
-    const [result] = await db
-      .select()
-      .from(pullRequestsTable)
-      .where(eq(pullRequestsTable.id, id));
+    const [result] = await db.select().from(pullRequestsTable).where(eq(pullRequestsTable.id, id));
 
     return { pullRequest: result };
   }

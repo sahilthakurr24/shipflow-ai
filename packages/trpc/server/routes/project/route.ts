@@ -31,7 +31,10 @@ export const projectRouter = router({
       const { id } = await projectService.createProject(input);
 
       if (!id) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create project." });
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to create project.",
+        });
       }
 
       return { id };

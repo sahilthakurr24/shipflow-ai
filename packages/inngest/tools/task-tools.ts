@@ -17,7 +17,9 @@ export function createCreateTaskTool(params: {
         .string()
         .min(1)
         .max(200)
-        .describe("A specific, actionable unit of work, e.g. 'Add rate-limit middleware to /api/login'"),
+        .describe(
+          "A specific, actionable unit of work, e.g. 'Add rate-limit middleware to /api/login'",
+        ),
       description: z
         .string()
         .optional()
@@ -26,14 +28,24 @@ export function createCreateTaskTool(params: {
         ),
       type: taskTypeSchema
         .optional()
-        .describe("feature | bug | chore | test | docs | spike — pick spike only for genuinely exploratory work"),
-      priority: taskPrioritySchema.optional().describe("Derived from how foundational the task is to the PRD's goals"),
-      estimatePoints: z.number().int().optional().describe("Relative size (1, 2, 3, 5, or 8) based on complexity"),
+        .describe(
+          "feature | bug | chore | test | docs | spike — pick spike only for genuinely exploratory work",
+        ),
+      priority: taskPrioritySchema
+        .optional()
+        .describe("Derived from how foundational the task is to the PRD's goals"),
+      estimatePoints: z
+        .number()
+        .int()
+        .optional()
+        .describe("Relative size (1, 2, 3, 5, or 8) based on complexity"),
       boardPosition: z
         .number()
         .int()
         .optional()
-        .describe("Sequential build order reflecting dependencies before dependents, starting at 0"),
+        .describe(
+          "Sequential build order reflecting dependencies before dependents, starting at 0",
+        ),
     }),
     handler: async (input, { step }) => {
       const { id } = await runStep(step, "create-task", { ...params, ...input }, () =>

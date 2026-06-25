@@ -36,7 +36,7 @@ class OrganizationService {
       .returning({ id: organizationsTable.id });
 
     return result?.id;
-  };
+  }
 
   public async getOrganizationById(payload: OrganizationIdInputType) {
     const { id } = await organizationIdInput.parseAsync(payload);
