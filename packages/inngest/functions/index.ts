@@ -3,6 +3,7 @@ import { helloWorld } from "./hello-world";
 import { prdGenerationFunction } from "./prd-generation";
 import { requirementClarificationFunction } from "./requirement-clarification";
 import { taskGenerationFunction } from "./task-generation";
+import { githubWebhookFunction } from "./github-webhook";
 
 export const functions = [
   helloWorld,
@@ -10,4 +11,5 @@ export const functions = [
   prdGenerationFunction,
   taskGenerationFunction,
   aiReviewFunction,
+  githubWebhookFunction
 ];
