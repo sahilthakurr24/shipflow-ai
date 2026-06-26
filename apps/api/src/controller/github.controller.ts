@@ -7,6 +7,7 @@ export async function handleGithubWebhook(req: Request, res: Response) {
   const payload = req.body.toString("utf8");
   const signature = req.get("x-hub-signature-256");
   const eventName = req.get("x-github-event");
+  const deliveryId = req.get("x-github-delivery");
 
   const isValid = await isSignatureValid(payload, signature);
 
@@ -22,6 +23,7 @@ export async function handleGithubWebhook(req: Request, res: Response) {
     name: "github/webhook.received",
     data: {
       eventName,
+      deliveryId,
       payload: data,
     },
   });

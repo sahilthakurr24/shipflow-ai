@@ -65,3 +65,34 @@ export const listPullRequestFilesInput = z.object({
   pullRequestId: z.uuid().describe("id of the pull request"),
 });
 export type ListPullRequestFilesInputType = z.infer<typeof listPullRequestFilesInput>;
+
+export const snapshotPullRequestFile = z.object({
+  filename: z.string(),
+  previousFilename: z.string().optional(),
+  status: pullRequestFileStatusSchema,
+  additions: z.number().int().optional(),
+  deletions: z.number().int().optional(),
+  changes: z.number().int().optional(),
+  patch: z.string().optional(),
+});
+
+export const snapshotPullRequestInput = z.object({
+  organizationId: z.uuid().describe("id of the organization"),
+  repositoryId: z.uuid().describe("id of the repository"),
+  githubPrNumber: z.number().int(),
+  githubPrId: z.string().max(64).optional(),
+  title: z.string().max(512),
+  body: z.string().optional(),
+  state: pullRequestStateSchema.optional(),
+  isDraft: z.boolean().optional(),
+  authorLogin: z.string().max(255).optional(),
+  headBranch: z.string().max(255).optional(),
+  baseBranch: z.string().max(255).optional(),
+  headSha: z.string().max(64).optional(),
+  htmlUrl: z.string().optional(),
+  additions: z.number().int().optional(),
+  deletions: z.number().int().optional(),
+  changedFilesCount: z.number().int().optional(),
+  files: z.array(snapshotPullRequestFile),
+});
+export type SnapshotPullRequestInputType = z.infer<typeof snapshotPullRequestInput>;

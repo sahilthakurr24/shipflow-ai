@@ -4,6 +4,7 @@ import { prdGenerationFunction } from "./prd-generation";
 import { requirementClarificationFunction } from "./requirement-clarification";
 import { taskGenerationFunction } from "./task-generation";
 import { githubWebhookFunction } from "./github-webhook";
+import { githubPullRequestFunction } from "./github-pull-request";
 
 export const functions = [
   helloWorld,
@@ -11,5 +12,6 @@ export const functions = [
   prdGenerationFunction,
   taskGenerationFunction,
   aiReviewFunction,
-  githubWebhookFunction
+  githubWebhookFunction,
+  githubPullRequestFunction,
 ];

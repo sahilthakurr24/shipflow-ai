@@ -4,7 +4,38 @@ import {
   GetInstallUrlInputType,
   listInstallationRepositoriesInput,
   ListInstallationRepositoriesInputType,
+  pullRequestRefInput,
+  PullRequestRefInputType,
 } from "./model";
+
+type PullRequestFileStatus = "added" | "modified" | "removed" | "renamed" | "copied" | "changed";
+
+const FILE_STATUSES: PullRequestFileStatus[] = [
+  "added",
+  "modified",
+  "removed",
+  "renamed",
+  "copied",
+  "changed",
+];
+
+/** GitHub also returns "unchanged"; map anything outside our enum to "modified". */
+function mapFileStatus(status: string): PullRequestFileStatus {
+  return (FILE_STATUSES as string[]).includes(status)
+    ? (status as PullRequestFileStatus)
+    : "modified";
+}
+
+function mapPullRequestState(pr: {
+  merged?: boolean;
+  state: string;
+  draft?: boolean;
+}): "open" | "closed" | "merged" | "draft" {
+  if (pr.merged) return "merged";
+  if (pr.state === "closed") return "closed";
+  if (pr.draft) return "draft";
+  return "open";
+}
 
 class GithubService {
   /** An Octokit scoped to one installation (token minted + cached by the App). */
@@ -40,6 +71,64 @@ class GithubService {
     }));
 
     return { repositories };
+  }
+
+  /** Fetch a PR's current state from GitHub, shaped for snapshotPullRequest. */
+  public async getPullRequest(payload: PullRequestRefInputType) {
+    const { installationId, owner, repo, pullNumber } =
+      await pullRequestRefInput.parseAsync(payload);
+    const octokit = await this.getInstallationOctokit(installationId);
+
+    const { data: pr } = await octokit.rest.pulls.get({
+      owner,
+      repo,
+      pull_number: pullNumber,
+    });
+
+    const pullRequest = {
+      githubPrNumber: pr.number,
+      githubPrId: String(pr.id),
+      title: pr.title,
+      body: pr.body ?? undefined,
+      state: mapPullRequestState(pr),
+      isDraft: pr.draft ?? false,
+      authorLogin: pr.user?.login,
+      headBranch: pr.head.ref,
+      baseBranch: pr.base.ref,
+      headSha: pr.head.sha,
+      htmlUrl: pr.html_url,
+      additions: pr.additions,
+      deletions: pr.deletions,
+      changedFilesCount: pr.changed_files,
+    };
+
+    return { pullRequest };
+  }
+
+  /** Fetch a PR's changed files + patches, shaped for snapshotPullRequest. */
+  public async listPullRequestFiles(payload: PullRequestRefInputType) {
+    const { installationId, owner, repo, pullNumber } =
+      await pullRequestRefInput.parseAsync(payload);
+    const octokit = await this.getInstallationOctokit(installationId);
+
+    const data = await octokit.paginate(octokit.rest.pulls.listFiles, {
+      owner,
+      repo,
+      pull_number: pullNumber,
+      per_page: 100,
+    });
+
+    const files = data.map((file) => ({
+      filename: file.filename,
+      previousFilename: file.previous_filename,
+      status: mapFileStatus(file.status),
+      additions: file.additions,
+      deletions: file.deletions,
+      changes: file.changes,
+      patch: file.patch,
+    }));
+
+    return { files };
   }
 }
 
