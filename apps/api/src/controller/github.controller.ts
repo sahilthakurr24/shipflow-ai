@@ -3,6 +3,7 @@ import { inngest } from "@repo/inngest";
 import { isSignatureValid } from "../helper/isSignatureValid";
 
 export async function handleGithubWebhook(req: Request, res: Response) {
+  //signature is verified in raw bytes
   const payload = req.body.toString("utf8");
   const signature = req.get("x-hub-signature-256");
   const eventName = req.get("x-github-event");

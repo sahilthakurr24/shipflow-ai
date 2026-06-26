@@ -9,7 +9,8 @@ import {
 class GithubService {
   /** An Octokit scoped to one installation (token minted + cached by the App). */
   private async getInstallationOctokit(installationId: string) {
-    return getGithubApp().getInstallationOctokit(Number(installationId));
+    const app = await getGithubApp();
+    return app.getInstallationOctokit(Number(installationId));
   }
 
   public async getInstallUrl(payload: GetInstallUrlInputType) {

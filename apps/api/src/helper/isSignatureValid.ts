@@ -5,6 +5,6 @@ export async function isSignatureValid(payload: string, signature: string | unde
     return false;
   }
 
-  const app = getGithubApp();
+  const app = await getGithubApp();
   return app.webhooks.verify(payload, signature);
 }
