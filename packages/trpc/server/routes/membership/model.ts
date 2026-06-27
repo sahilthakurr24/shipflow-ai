@@ -48,3 +48,11 @@ export const removeMemberOutput = z.object({
 export const organizationMembersInput = z.object({
   organizationId: z.uuid().describe("id of the organization"),
 });
+
+export const leaveOrganizationInput = z.object({
+  organizationId: z.uuid().describe("id of the organization"),
+});
+
+export const leaveOrganizationOutput = z.object({
+  success: z.boolean(),
+});

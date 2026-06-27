@@ -21,7 +21,11 @@ const openApiDocument = generateOpenApiDocument(serverRouter, {
 if (env.NODE_ENV !== "prod") {
   app.use(
     cors({
-      origin: "*",
+      // Reflect the request origin (not "*") and allow credentials, so the web
+      // app's cross-origin tRPC calls with `credentials: "include"` carry the
+      // better-auth session cookie. Browsers reject "*" for credentialed requests.
+      origin: true,
+      credentials: true,
     }),
   );
 }

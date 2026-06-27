@@ -3,9 +3,9 @@ import type { Metadata } from "next";
 import { AuthForm } from "~/components/auth-form";
 
 export const metadata: Metadata = {
-  title: "Sign in · ShipFlow AI",
+  title: "Sign up · ShipFlow AI",
 };
 
-export default function SignInPage() {
-  return <AuthForm mode="signin" />;
+export default function SignUpPage() {
+  return <AuthForm mode="signup" />;
 }

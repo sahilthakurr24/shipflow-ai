@@ -3,6 +3,8 @@ import { membershipsTable, usersTable } from "@repo/database/schema";
 import {
   createMembershipInput,
   CreateMembershipInputType,
+  leaveOrganizationInput,
+  LeaveOrganizationInputType,
   membershipIdentifierInput,
   MembershipIdentifierInputType,
   updateMemberRoleInput,
@@ -77,6 +79,55 @@ class MembershipService {
 
   public async removeMember(payload: MembershipIdentifierInputType) {
     const { organizationId, userId } = await membershipIdentifierInput.parseAsync(payload);
+
+    await db
+      .delete(membershipsTable)
+      .where(
+        and(
+          eq(membershipsTable.organizationId, organizationId),
+          eq(membershipsTable.userId, userId),
+        ),
+      );
+  }
+
+  /**
+   * Self-service leave: a member removes their own membership. The sole owner
+   * cannot leave (they must transfer ownership or delete the org instead).
+   */
+  public async leaveOrganization(payload: LeaveOrganizationInputType) {
+    const { organizationId, userId } = await leaveOrganizationInput.parseAsync(payload);
+
+    const [membership] = await db
+      .select({ role: membershipsTable.role })
+      .from(membershipsTable)
+      .where(
+        and(
+          eq(membershipsTable.organizationId, organizationId),
+          eq(membershipsTable.userId, userId),
+        ),
+      );
+
+    if (!membership) {
+      throw new Error("You are not a member of this organization.");
+    }
+
+    if (membership.role === "owner") {
+      const owners = await db
+        .select({ id: membershipsTable.id })
+        .from(membershipsTable)
+        .where(
+          and(
+            eq(membershipsTable.organizationId, organizationId),
+            eq(membershipsTable.role, "owner"),
+          ),
+        );
+
+      if (owners.length <= 1) {
+        throw new Error(
+          "You are the only owner. Transfer ownership or delete the organization instead.",
+        );
+      }
+    }
 
     await db
       .delete(membershipsTable)

@@ -6,6 +6,8 @@ import {
   addMemberOutput,
   createMembershipInput,
   getMembershipOutput,
+  leaveOrganizationInput,
+  leaveOrganizationOutput,
   listOrganizationMembersOutput,
   membershipIdentifierInput,
   organizationMembersInput,
@@ -71,6 +73,21 @@ export const membershipRouter = router({
     .mutation(async ({ ctx, input }) => {
       await assertOrgAccess(ctx.userId, input.organizationId, MANAGE_ROLES);
       await membershipService.removeMember(input);
+
+      return { success: true };
+    }),
+
+  leaveOrganization: authenticatedProcedure
+    .meta({ openapi: { method: "POST", path: getPath("/leave"), tags: TAGS } })
+    .input(leaveOrganizationInput)
+    .output(leaveOrganizationOutput)
+    .mutation(async ({ ctx, input }) => {
+      // Any member may leave (subject to the sole-owner guard in the service).
+      await assertOrgAccess(ctx.userId, input.organizationId);
+      await membershipService.leaveOrganization({
+        organizationId: input.organizationId,
+        userId: ctx.userId,
+      });
 
       return { success: true };
     }),

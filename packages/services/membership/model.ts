@@ -28,3 +28,10 @@ export const updateMemberRoleInput = z.object({
 });
 
 export type UpdateMemberRoleInputType = z.infer<typeof updateMemberRoleInput>;
+
+export const leaveOrganizationInput = z.object({
+  organizationId: z.uuid().describe("id of the organization"),
+  userId: z.uuid().describe("id of the user leaving"),
+});
+
+export type LeaveOrganizationInputType = z.infer<typeof leaveOrganizationInput>;

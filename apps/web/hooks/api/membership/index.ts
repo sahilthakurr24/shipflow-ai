@@ -73,3 +73,21 @@ export function useRemoveMember() {
   });
   return { removeMemberAsync, error, isError, isIdle, isPending, isSuccess, status };
 }
+
+export function useLeaveOrganization() {
+  const utils = trpc.useUtils();
+  const {
+    mutateAsync: leaveOrganizationAsync,
+    error,
+    isError,
+    isIdle,
+    isPending,
+    isSuccess,
+    status,
+  } = trpc.membership.leaveOrganization.useMutation({
+    onSuccess: async () => {
+      await utils.organization.getUserOrganizations.invalidate();
+    },
+  });
+  return { leaveOrganizationAsync, error, isError, isIdle, isPending, isSuccess, status };
+}
