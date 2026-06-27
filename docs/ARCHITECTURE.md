@@ -120,7 +120,7 @@ sequenceDiagram
 
 ## 3. Authentication — better-auth (GitHub login)
 
-better-auth handles **identity only** (login). Repo API access is a *separate* concern (GitHub App, §5–6).
+better-auth handles **identity only** (login). Repo API access is a _separate_ concern (GitHub App, §5–6).
 
 ```mermaid
 sequenceDiagram
@@ -194,14 +194,14 @@ flowchart TD
 
 **Under-the-hood guarantees**
 
-| Concern | How |
-| --- | --- |
-| Signature | `express.raw` mounted **before** `express.json()` so HMAC runs on exact bytes |
-| Idempotency | `onConflictDoNothing(deliveryId)` → re-deliveries return `duplicate: true` |
-| Atomicity | `recordGithubDelivery` & `snapshotPullRequest` each run in one `db.transaction` |
-| Freshness | file snapshot is **replaced** on each push, so deleted files don't linger |
-| Isolation | each stage is its own Inngest function → independent retries / rate limits |
-| ESM/CJS | `octokit` v5 (ESM-only) loaded via dynamic `import()` from the CJS service |
+| Concern     | How                                                                             |
+| ----------- | ------------------------------------------------------------------------------- |
+| Signature   | `express.raw` mounted **before** `express.json()` so HMAC runs on exact bytes   |
+| Idempotency | `onConflictDoNothing(deliveryId)` → re-deliveries return `duplicate: true`      |
+| Atomicity   | `recordGithubDelivery` & `snapshotPullRequest` each run in one `db.transaction` |
+| Freshness   | file snapshot is **replaced** on each push, so deleted files don't linger       |
+| Isolation   | each stage is its own Inngest function → independent retries / rate limits      |
+| ESM/CJS     | `octokit` v5 (ESM-only) loaded via dynamic `import()` from the CJS service      |
 
 ---
 
@@ -248,16 +248,16 @@ flowchart LR
     R_PR -->|"pull-request/review.requested"| FN_AIR
 ```
 
-| Event | Emitted by | Consumed by |
-| --- | --- | --- |
-| `feature-request/created` | feature-request route | `requirement-clarification` |
-| `feature-request/clarification.replied` | feature-request route | `requirement-clarification` |
-| `feature-request/prd.requested` | `requirement-clarification` fn | `prd-generation` |
-| `prd/tasks.requested` | prd route | `task-generation` |
-| `github/webhook.received` | github controller | `github-webhook` |
-| `github/pull_request` | `github-webhook` fn | `github-pull-request` |
-| `pull-request/review.requested` | `github-pull-request` fn · pull-request route | `ai-review` |
-| `test/hello.world` | — | `hello-world` |
+| Event                                   | Emitted by                                    | Consumed by                 |
+| --------------------------------------- | --------------------------------------------- | --------------------------- |
+| `feature-request/created`               | feature-request route                         | `requirement-clarification` |
+| `feature-request/clarification.replied` | feature-request route                         | `requirement-clarification` |
+| `feature-request/prd.requested`         | `requirement-clarification` fn                | `prd-generation`            |
+| `prd/tasks.requested`                   | prd route                                     | `task-generation`           |
+| `github/webhook.received`               | github controller                             | `github-webhook`            |
+| `github/pull_request`                   | `github-webhook` fn                           | `github-pull-request`       |
+| `pull-request/review.requested`         | `github-pull-request` fn · pull-request route | `ai-review`                 |
+| `test/hello.world`                      | —                                             | `hello-world`               |
 
 ---
 
@@ -302,6 +302,7 @@ flowchart LR
     A["process / function"] --> B[("database table")]
     C{"decision"} -->|"event / label"| D["next step"]
 ```
+
 - **Rectangle** — a function, route, or service call
 - **Cylinder** — a Postgres table
 - **Diamond** — a branch / guard
