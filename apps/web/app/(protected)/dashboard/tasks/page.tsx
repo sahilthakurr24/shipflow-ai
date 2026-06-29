@@ -67,7 +67,7 @@ export default function TasksPage() {
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
       <header className="flex items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">Tasks</h2>
@@ -134,7 +134,7 @@ export default function TasksPage() {
               initial={{ opacity: 0, y: 4 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2 }}
-              className="min-h-0 flex-1"
+              className="min-h-0 min-w-0 flex-1"
             >
               <TaskBoard
                 tasks={filteredTasks}
