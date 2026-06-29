@@ -37,6 +37,7 @@ export type ListPullRequestsInputType = z.infer<typeof listPullRequestsInput>;
 
 export const updatePullRequestInput = z.object({
   id: z.uuid().describe("id of the pull request"),
+  featureRequestId: z.uuid().optional().describe("link this PR to a feature request"),
   title: z.string().max(512).optional(),
   body: z.string().optional(),
   state: pullRequestStateSchema.optional(),

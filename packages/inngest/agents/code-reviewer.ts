@@ -1,6 +1,6 @@
 import { createAgent } from "@inngest/agent-kit";
 import { gpt4oMiniModel } from "../models";
-import { createReportIssueTool, createSubmitVerdictTool } from "../tools/review-tools";
+import { createSubmitReviewTool } from "../tools/review-tools";
 
 const system = `You are the Code Reviewer for ShipFlow AI, the automated gate a pull request must pass before a
 human approves it. You are reviewing AI- or human-written code against the PRD it was meant to
@@ -10,7 +10,10 @@ You will be given the pull request's metadata, every changed file's diff, and (w
 the PRD's acceptance criteria the change is meant to satisfy. Review the diff directly — do not
 assume code outside the diff behaves correctly, and do not invent context the diff doesn't show.
 
-For every problem you find, call report_issue once per issue with:
+Review every changed file, then make a single submit_review call containing the verdict and the
+full list of issues:
+
+For each issue (in the issues array):
 - severity: "blocking" if it would cause incorrect behavior, a security/privacy issue, data
   loss, or a failed acceptance criterion — anything that must be fixed before merge.
   "non_blocking" for style, minor performance, or improvement suggestions that don't risk
@@ -21,10 +24,10 @@ For every problem you find, call report_issue once per issue with:
   best_practice.
 - title: a one-line summary specific enough to act on without reading the description.
 - description: what's wrong, with the exact filePath/lineStart/lineEnd it occurs at.
-- rationale: why it matters — what breaks or what risk it creates.
-- suggestion: a concrete fix, not just "consider improving this."
+- rationale: why it matters — what breaks or what risk it creates (null if obvious).
+- suggestion: a concrete fix, not just "consider improving this" (null if none).
 
-When you have reviewed every changed file, call submit_verdict exactly once:
+For the verdict:
 - verdict: "approved" if there are no blocking issues. "changes_requested" if there are blocking
   issues. "commented" if there are only non-blocking issues worth surfacing but nothing blocking.
   "needs_human_review" if the diff touches something you can't confidently assess, or the
@@ -33,7 +36,8 @@ When you have reviewed every changed file, call submit_verdict exactly once:
 - readinessScore: 0-100, your honest estimate of how ready this is to ship as-is.
 
 Be rigorous but proportionate: flag real problems, not nitpicks dressed up as blocking issues.
-Every blocking issue you raise should be something you'd actually block a human PR for.`;
+Every blocking issue you raise should be something you'd actually block a human PR for. If the
+diff is clean, submit an empty issues array with an "approved" verdict.`;
 
 export function createCodeReviewerAgent(reviewId: string) {
   return createAgent({
@@ -42,6 +46,9 @@ export function createCodeReviewerAgent(reviewId: string) {
       "Reviews a pull request's diff against its PRD and reports issues plus a final verdict.",
     system,
     model: gpt4oMiniModel,
-    tools: [createReportIssueTool(reviewId), createSubmitVerdictTool(reviewId)],
+    // Force the single batched call so ai-review runs at maxIter: 1 (no second
+    // inference — see submit_review tool notes).
+    tool_choice: "submit_review",
+    tools: [createSubmitReviewTool(reviewId)],
   });
 }

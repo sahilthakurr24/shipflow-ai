@@ -114,10 +114,13 @@ export const aiReviewFunction = inngest.createFunction(
 
       const agent = createCodeReviewerAgent(reviewId);
       const state = createState<AiReviewState>();
+      // maxIter: 1 — the reviewer submits the whole review in a single forced
+      // submit_review call, so there is no second inference (which agent-kit would
+      // send without the tool-result message, causing an OpenAI 400).
       await agent.run(buildPrompt(pullRequest, files, Boolean(prdId), acceptanceCriteria), {
         state,
         step,
-        maxIter: 15,
+        maxIter: 1,
       });
 
       if (!state.data.verdict) {

@@ -1,0 +1,211 @@
+"use client";
+
+import * as React from "react";
+import { skipToken } from "@tanstack/react-query";
+import { Check, Loader2, RefreshCw, ScanSearch, TriangleAlert } from "lucide-react";
+import { toast } from "sonner";
+
+import { Badge } from "~/components/ui/badge";
+import { Button } from "~/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
+import { useRequestReview } from "~/hooks/api/pull-request";
+import { useUpdateReviewIssueStatus } from "~/hooks/api/review";
+import { cn } from "~/lib/utils";
+import { trpc } from "~/trpc/client";
+import { type Review, type ReviewIssue, VerdictBadge } from "./shared";
+
+const RUNNING = new Set(["queued", "running"]);
+const ISSUE_STATUSES = ["open", "resolved", "wont_fix", "ignored"] as const;
+const ISSUE_STATUS_LABEL: Record<string, string> = {
+  open: "Open",
+  resolved: "Resolved",
+  wont_fix: "Won't fix",
+  ignored: "Ignored",
+};
+
+function IssueRow({ issue }: { issue: ReviewIssue }) {
+  const { updateReviewIssueStatusAsync } = useUpdateReviewIssueStatus();
+  const blocking = issue.severity === "blocking";
+  const muted = issue.status !== "open";
+
+  async function setStatus(status: (typeof ISSUE_STATUSES)[number]) {
+    try {
+      await updateReviewIssueStatusAsync({ id: issue.id, status });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update issue");
+    }
+  }
+
+  return (
+    <div className={cn("rounded-lg border p-3", muted && "opacity-60")}>
+      <div className="flex items-start gap-2">
+        <TriangleAlert
+          className={cn(
+            "mt-0.5 size-4 shrink-0",
+            blocking ? "text-red-500" : "text-amber-500",
+          )}
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Badge
+              variant="outline"
+              className={cn(
+                "h-5 rounded px-1.5 text-[11px]",
+                blocking
+                  ? "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400"
+                  : "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400",
+              )}
+            >
+              {blocking ? "Blocking" : "Non-blocking"}
+            </Badge>
+            <Badge variant="secondary" className="h-5 rounded px-1.5 text-[11px] capitalize">
+              {issue.category.replace(/_/g, " ")}
+            </Badge>
+            <span className="text-sm font-medium">{issue.title}</span>
+          </div>
+          <p className="text-muted-foreground mt-1 text-sm leading-relaxed">{issue.description}</p>
+          {issue.filePath ? (
+            <p className="text-muted-foreground/80 mt-1 font-mono text-xs">
+              {issue.filePath}
+              {issue.lineStart != null ? `:${issue.lineStart}` : ""}
+            </p>
+          ) : null}
+          {issue.suggestion ? (
+            <p className="mt-1.5 text-sm">
+              <span className="text-muted-foreground">Fix: </span>
+              {issue.suggestion}
+            </p>
+          ) : null}
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-7 shrink-0 text-xs">
+              {ISSUE_STATUS_LABEL[issue.status] ?? issue.status}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {ISSUE_STATUSES.map((s) => (
+              <DropdownMenuItem key={s} onClick={() => void setStatus(s)}>
+                {ISSUE_STATUS_LABEL[s]}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  );
+}
+
+export function PrReview({
+  organizationId,
+  pullRequestId,
+  onReviewLoaded,
+}: {
+  organizationId: string;
+  pullRequestId: string;
+  onReviewLoaded?: (review: Review | undefined) => void;
+}) {
+  const reviewsQuery = trpc.review.listReviews.useQuery(
+    { organizationId, pullRequestId },
+    {
+      refetchInterval: (q) => {
+        const latest = [...(q.state.data?.reviews ?? [])].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )[0];
+        return latest && RUNNING.has(latest.status) ? 3000 : false;
+      },
+    },
+  );
+  const review = [...(reviewsQuery.data?.reviews ?? [])].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  )[0];
+
+  React.useEffect(() => onReviewLoaded?.(review), [review, onReviewLoaded]);
+
+  const issuesQuery = trpc.review.listReviewIssues.useQuery(
+    review ? { reviewId: review.id } : skipToken,
+  );
+  const issues = [...(issuesQuery.data?.issues ?? [])].sort(
+    (a, b) =>
+      (a.severity === "blocking" ? 0 : 1) - (b.severity === "blocking" ? 0 : 1),
+  );
+
+  const { requestReviewAsync, isPending: isRerunning } = useRequestReview();
+  const isRunning = review ? RUNNING.has(review.status) : false;
+
+  async function rerun() {
+    try {
+      await requestReviewAsync({ id: pullRequestId });
+      toast.success("AI review requested");
+      await reviewsQuery.refetch();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to request review");
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between gap-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <ScanSearch className="size-4" />
+          AI Review
+          {review?.verdict ? <VerdictBadge verdict={review.verdict} /> : null}
+          {isRunning ? (
+            <Badge variant="secondary" className="gap-1">
+              <Loader2 className="size-3 animate-spin" />
+              {review?.status === "queued" ? "Queued" : "Reviewing"}
+            </Badge>
+          ) : null}
+        </CardTitle>
+        <Button variant="outline" size="sm" onClick={rerun} disabled={isRerunning || isRunning}>
+          {isRerunning ? <Loader2 className="animate-spin" /> : <RefreshCw className="size-4" />}
+          {review ? "Re-run" : "Run AI review"}
+        </Button>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-4">
+        {!review ? (
+          <p className="text-muted-foreground/70 text-sm italic">
+            No review yet. Run the AI review to check this diff against the PRD.
+          </p>
+        ) : (
+          <>
+            {review.readinessScore != null ? (
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">Readiness</span>
+                <span className="font-semibold">{review.readinessScore}/100</span>
+                <span className="text-muted-foreground">
+                  · {review.blockingCount} blocking · {review.nonBlockingCount} non-blocking
+                </span>
+              </div>
+            ) : null}
+
+            {review.summary ? (
+              <p className="text-sm leading-relaxed">{review.summary}</p>
+            ) : isRunning ? (
+              <p className="text-muted-foreground text-sm">The reviewer is analyzing the diff…</p>
+            ) : null}
+
+            {issues.length ? (
+              <div className="flex flex-col gap-2">
+                {issues.map((issue) => (
+                  <IssueRow key={issue.id} issue={issue} />
+                ))}
+              </div>
+            ) : review.status === "completed" ? (
+              <p className="flex items-center gap-1.5 text-sm text-emerald-600 dark:text-emerald-400">
+                <Check className="size-4" />
+                No issues found.
+              </p>
+            ) : null}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

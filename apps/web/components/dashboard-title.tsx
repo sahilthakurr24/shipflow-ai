@@ -9,6 +9,7 @@ const SECTION_LABELS: Record<string, { list: string; detail: string }> = {
   prds: { list: "PRDs", detail: "PRD" },
   "feature-requests": { list: "Feature Requests", detail: "Feature Request" },
   repositories: { list: "Repositories", detail: "Repository" },
+  "pull-requests": { list: "Pull Requests", detail: "Pull Request" },
 };
 
 export function DashboardTitle() {
