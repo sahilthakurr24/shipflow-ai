@@ -10,6 +10,7 @@ import {
 import { timestamps } from "./helpers";
 import { organizationsTable } from "./organization";
 import { projectsTable } from "./project";
+import { repositoriesTable } from "./repository";
 import { usersTable } from "./user";
 
 /**
@@ -25,6 +26,10 @@ export const featureRequestsTable = pgTable(
       .notNull()
       .references(() => organizationsTable.id, { onDelete: "cascade" }),
     projectId: uuid("project_id").references(() => projectsTable.id, { onDelete: "set null" }),
+    /** The single repository this request targets — the AI's code context. */
+    repositoryId: uuid("repository_id").references(() => repositoriesTable.id, {
+      onDelete: "set null",
+    }),
     title: varchar("title", { length: 200 }).notNull(),
     description: text("description").notNull(),
     source: featureRequestSourceEnum("source").notNull().default("manual"),

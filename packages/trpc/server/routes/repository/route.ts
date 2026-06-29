@@ -12,9 +12,13 @@ import {
   deleteRepositoryOutput,
   getInstallUrlInput,
   getInstallUrlOutput,
+  getRepoBranchesOutput,
+  getRepoCommitsOutput,
+  getRepoOpenPullRequestsOutput,
   getRepositoryOutput,
   listRepositoriesInput,
   listRepositoriesOutput,
+  repositoryDetailInput,
   repositoryIdInput,
   updateRepositoryInput,
   updateRepositoryOutput,
@@ -24,6 +28,33 @@ const TAGS = ["Repositories"];
 const getPath = generatePath("/repositories");
 
 const MANAGE_ROLES = ["owner", "admin"] as const;
+
+/**
+ * Resolve a connected repository to the { installationId, owner, repo } ref used
+ * for live GitHub reads, after checking the caller can access its organization.
+ */
+async function resolveRepoRef(userId: string, repositoryId: string) {
+  const { repository } = await repositoryService.getRepositoryById({ id: repositoryId });
+
+  if (!repository) {
+    throw new TRPCError({ code: "NOT_FOUND", message: "Repository not found." });
+  }
+
+  await assertOrgAccess(userId, repository.organizationId);
+
+  if (!repository.githubInstallationId) {
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message: "Repository is not linked to a GitHub installation.",
+    });
+  }
+
+  return {
+    installationId: repository.githubInstallationId,
+    owner: repository.owner,
+    repo: repository.name,
+  };
+}
 
 export const repositoryRouter = router({
   createRepository: authenticatedProcedure
@@ -128,5 +159,32 @@ export const repositoryRouter = router({
       await repositoryService.deleteRepository(input);
 
       return { success: true };
+    }),
+
+  getRepoBranches: authenticatedProcedure
+    .meta({ openapi: { method: "GET", path: getPath("/branches"), tags: TAGS } })
+    .input(repositoryDetailInput)
+    .output(getRepoBranchesOutput)
+    .query(async ({ ctx, input }) => {
+      const ref = await resolveRepoRef(ctx.userId, input.repositoryId);
+      return githubService.listBranches(ref);
+    }),
+
+  getRepoCommits: authenticatedProcedure
+    .meta({ openapi: { method: "GET", path: getPath("/commits"), tags: TAGS } })
+    .input(repositoryDetailInput)
+    .output(getRepoCommitsOutput)
+    .query(async ({ ctx, input }) => {
+      const ref = await resolveRepoRef(ctx.userId, input.repositoryId);
+      return githubService.listCommits(ref);
+    }),
+
+  getRepoOpenPullRequests: authenticatedProcedure
+    .meta({ openapi: { method: "GET", path: getPath("/open-pull-requests"), tags: TAGS } })
+    .input(repositoryDetailInput)
+    .output(getRepoOpenPullRequestsOutput)
+    .query(async ({ ctx, input }) => {
+      const ref = await resolveRepoRef(ctx.userId, input.repositoryId);
+      return githubService.listOpenPullRequests(ref);
     }),
 });

@@ -22,8 +22,10 @@ export function useListRepositories(
 export function useGetGithubInstallUrl(
   input: Parameters<typeof trpc.repository.getGithubInstallUrl.useQuery>[0],
 ) {
+  // Always recompute from the server (it depends on the App slug in env) and
+  // never serve a stale value — staleTime 0 refetches on every mount.
   const { data, error, isFetched, isFetching, isLoading, refetch, status } =
-    trpc.repository.getGithubInstallUrl.useQuery(input);
+    trpc.repository.getGithubInstallUrl.useQuery(input, { staleTime: 0 });
   return { url: data?.url, error, isFetched, isFetching, isLoading, refetch, status };
 }
 
@@ -33,6 +35,41 @@ export function useGetRepositoryById(
   const { data, error, isFetched, isFetching, isLoading, refetch, status } =
     trpc.repository.getRepositoryById.useQuery(input);
   return { repository: data?.repository, error, isFetched, isFetching, isLoading, refetch, status };
+}
+
+// Live GitHub reads — finite staleTime so they revalidate (global default is Infinity).
+const LIVE_STALE_TIME = 60 * 1000;
+
+export function useGetRepoBranches(
+  input: Parameters<typeof trpc.repository.getRepoBranches.useQuery>[0],
+) {
+  const { data, error, isFetched, isFetching, isLoading, refetch, status } =
+    trpc.repository.getRepoBranches.useQuery(input, { staleTime: LIVE_STALE_TIME });
+  return { branches: data?.branches ?? [], error, isFetched, isFetching, isLoading, refetch, status };
+}
+
+export function useGetRepoCommits(
+  input: Parameters<typeof trpc.repository.getRepoCommits.useQuery>[0],
+) {
+  const { data, error, isFetched, isFetching, isLoading, refetch, status } =
+    trpc.repository.getRepoCommits.useQuery(input, { staleTime: LIVE_STALE_TIME });
+  return { commits: data?.commits ?? [], error, isFetched, isFetching, isLoading, refetch, status };
+}
+
+export function useGetRepoOpenPullRequests(
+  input: Parameters<typeof trpc.repository.getRepoOpenPullRequests.useQuery>[0],
+) {
+  const { data, error, isFetched, isFetching, isLoading, refetch, status } =
+    trpc.repository.getRepoOpenPullRequests.useQuery(input, { staleTime: LIVE_STALE_TIME });
+  return {
+    pullRequests: data?.pullRequests ?? [],
+    error,
+    isFetched,
+    isFetching,
+    isLoading,
+    refetch,
+    status,
+  };
 }
 
 // mutations

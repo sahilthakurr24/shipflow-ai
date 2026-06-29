@@ -22,3 +22,20 @@ export const pullRequestRefInput = z.object({
 });
 
 export type PullRequestRefInputType = z.infer<typeof pullRequestRefInput>;
+
+export const repoRefInput = z.object({
+  installationId: z.string().describe("GitHub App installation id"),
+  owner: z.string().describe("repo owner/org login"),
+  repo: z.string().describe("repo name"),
+});
+
+export type RepoRefInputType = z.infer<typeof repoRefInput>;
+
+export const repoContextInput = z.object({
+  installationId: z.string().describe("GitHub App installation id"),
+  owner: z.string().describe("repo owner/org login"),
+  repo: z.string().describe("repo name"),
+  defaultBranch: z.string().describe("default branch to read the tree from"),
+});
+
+export type RepoContextInputType = z.infer<typeof repoContextInput>;

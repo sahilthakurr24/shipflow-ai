@@ -50,21 +50,27 @@ export const updateReviewInput = z.object({
 
 export type UpdateReviewInputType = z.infer<typeof updateReviewInput>;
 
+// LLM tools run in strict mode and send explicit `null` to omit a value;
+// normalize null → undefined so optional columns are simply left unset.
+const nullishToUndefined = <T extends z.ZodTypeAny>(schema: T) =>
+  schema.nullish().transform((v) => v ?? undefined);
+
 export const createReviewIssueInput = z.object({
   reviewId: z.uuid().describe("id of the review"),
   severity: issueSeveritySchema,
   category: issueCategorySchema,
   title: z.string().max(300).describe("short title of the issue"),
   description: z.string().describe("what the issue is"),
-  rationale: z.string().optional(),
-  suggestion: z.string().optional(),
-  filePath: z.string().optional(),
-  lineStart: z.number().int().optional(),
-  lineEnd: z.number().int().optional(),
-  acceptanceCriteriaId: z.uuid().optional(),
-  taskId: z.uuid().optional(),
+  rationale: nullishToUndefined(z.string()),
+  suggestion: nullishToUndefined(z.string()),
+  filePath: nullishToUndefined(z.string()),
+  lineStart: nullishToUndefined(z.number().int()),
+  lineEnd: nullishToUndefined(z.number().int()),
+  acceptanceCriteriaId: nullishToUndefined(z.uuid()),
+  taskId: nullishToUndefined(z.uuid()),
 });
-export type CreateReviewIssueInputType = z.infer<typeof createReviewIssueInput>;
+// z.input (pre-parse) so callers may pass null; normalized to undefined on parse.
+export type CreateReviewIssueInputType = z.input<typeof createReviewIssueInput>;
 
 export const listReviewIssuesInput = z.object({ reviewId: z.uuid().describe("id of the review") });
 export type ListReviewIssuesInputType = z.infer<typeof listReviewIssuesInput>;

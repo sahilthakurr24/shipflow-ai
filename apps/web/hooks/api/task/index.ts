@@ -69,3 +69,25 @@ export function useDeleteTask() {
   });
   return { deleteTaskAsync, error, isError, isIdle, isPending, isSuccess, status };
 }
+
+// Persists a drag/reorder. The board renders optimistically off local state, so
+// here we only need to commit and then reconcile the cache once it settles.
+export function useMoveTask() {
+  const utils = trpc.useUtils();
+  const { mutateAsync: moveTaskAsync, isPending } = trpc.task.moveTask.useMutation({
+    onSettled: async () => {
+      await utils.task.listTasks.invalidate();
+    },
+  });
+  return { moveTaskAsync, isPending };
+}
+
+export function useGenerateTasks() {
+  const utils = trpc.useUtils();
+  const { mutateAsync: generateTasksAsync, isPending } = trpc.task.generateTasks.useMutation({
+    onSuccess: async () => {
+      await utils.task.listTasks.invalidate();
+    },
+  });
+  return { generateTasksAsync, isPending };
+}

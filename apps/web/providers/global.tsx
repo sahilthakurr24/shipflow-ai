@@ -32,6 +32,26 @@ const persister = createSyncStoragePersister({
   storage: typeof window !== "undefined" ? window.localStorage : undefined,
 });
 
+// Queries never written to localStorage: env/config-derived URLs (must stay fresh)
+// and live GitHub reads (source-of-truth data we don't want a stale disk copy of).
+// These are still cached in-memory per their staleTime during a session.
+const NON_PERSISTED_REPOSITORY_QUERIES = new Set([
+  "getGithubInstallUrl",
+  "getRepoBranches",
+  "getRepoCommits",
+  "getRepoOpenPullRequests",
+]);
+
+function isNonPersistedQuery(queryKey: readonly unknown[]): boolean {
+  const path = queryKey[0];
+  return (
+    Array.isArray(path) &&
+    path[0] === "repository" &&
+    typeof path[1] === "string" &&
+    NON_PERSISTED_REPOSITORY_QUERIES.has(path[1])
+  );
+}
+
 /** Wipe the in-memory + persisted query cache (call on logout). */
 export function clearPersistedCache() {
   queryClient.clear();
@@ -50,7 +70,16 @@ export const GlobalProviders: React.FC<{ children: React.ReactNode }> = ({ child
     <PersistQueryClientProvider
       client={queryClient}
       // Bump `buster` to discard all persisted caches after a breaking change.
-      persistOptions={{ persister, maxAge: ONE_DAY, buster: "v1" }}
+      persistOptions={{
+        persister,
+        maxAge: ONE_DAY,
+        buster: "v1",
+        dehydrateOptions: {
+          // Persist only successful queries, and never the install-url query.
+          shouldDehydrateQuery: (query) =>
+            query.state.status === "success" && !isNonPersistedQuery(query.queryKey),
+        },
+      }}
     >
       <NextThemesProvider
         attribute="class"

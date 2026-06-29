@@ -5,10 +5,26 @@ import { runStep } from "../utils/run-step";
 
 const stringArray = z.array(z.string());
 
+/**
+ * A single tool that writes the entire PRD — document fields, user stories, and
+ * acceptance criteria — in ONE call.
+ *
+ * This is deliberately not split into per-item tools: agent-kit's multi-iteration
+ * loop drops tool-result messages from the history it sends to the next inference
+ * (chunk run loop sets `history = inference.output`, omitting `result.toolCalls`),
+ * which makes OpenAI reject the follow-up call ("tool_call_ids did not have
+ * response messages"). Doing everything in one call lets the agent run at
+ * maxIter: 1, so there is never a second inference to corrupt.
+ *
+ * Stories and criteria are nested so the model can link a criterion to a story by
+ * its array index, which we resolve to the real DB id after inserting the stories.
+ * Every field is required-but-nullable for OpenAI strict mode (see model notes).
+ */
 export function createCreatePrdTool(params: { organizationId: string; featureRequestId: string }) {
   return createTool({
     name: "create_prd",
-    description: "Create the PRD for this feature request. Call this exactly once.",
+    description:
+      "Write the complete PRD for this feature request in one call: the document, all user stories, and all acceptance criteria. Call this exactly once.",
     parameters: z.object({
       title: z.string().min(1).max(200).describe("Title of the PRD"),
       problemStatement: z
@@ -24,89 +40,84 @@ export function createCreatePrdTool(params: { organizationId: string; featureReq
       ),
       assumptions: stringArray.describe("Anything treated as true but not explicitly confirmed"),
       successMetrics: stringArray.describe("Measurable signals that this shipped successfully"),
+      userStories: z
+        .array(
+          z.object({
+            asA: z
+              .string()
+              .nullable()
+              .describe("The role of the user, e.g. 'a logged-in admin'; null if not applicable"),
+            iWant: z.string().nullable().describe("The capability they want; null if not applicable"),
+            soThat: z
+              .string()
+              .nullable()
+              .describe("The benefit they get from it; null if not applicable"),
+            narrative: z
+              .string()
+              .nullable()
+              .describe("Freeform narrative if asA/iWant/soThat don't fit; otherwise null"),
+          }),
+        )
+        .describe(
+          "One entry per distinct user-facing capability, most foundational first. Order in the array is the display order.",
+        ),
+      acceptanceCriteria: z
+        .array(
+          z.object({
+            description: z
+              .string()
+              .min(1)
+              .describe("A testable, pass/fail condition that must hold for the feature to be done"),
+            userStoryIndex: z
+              .number()
+              .int()
+              .nullable()
+              .describe(
+                "Index into the userStories array this criterion verifies (0-based), or null if it is cross-cutting (e.g. performance, security)",
+              ),
+          }),
+        )
+        .describe("Testable, binary conditions that define done. Order in the array is the display order."),
     }),
     handler: async (input, { network, step }) => {
-      const { id } = await runStep(step, "create-prd", { ...params, ...input }, () =>
+      const { userStories, acceptanceCriteria, ...prdFields } = input;
+
+      const { id: prdId } = await runStep(step, "create-prd", { ...params, ...prdFields }, () =>
         prdService.createPrd({
           organizationId: params.organizationId,
           featureRequestId: params.featureRequestId,
-          ...input,
+          ...prdFields,
         }),
       );
 
-      if (!id) throw new Error("Failed to create PRD");
+      if (!prdId) throw new Error("Failed to create PRD");
 
-      network.state.data.prdId = id;
+      // Insert stories in order, remembering each generated id so criteria can
+      // be linked by their declared array index.
+      const storyIds: string[] = [];
+      for (const [i, story] of userStories.entries()) {
+        const { id } = await runStep(step, "add-user-story", { prdId, i, ...story }, () =>
+          prdService.createUserStory({ prdId, ...story, orderIndex: i }),
+        );
+        if (id) storyIds.push(id);
+      }
 
-      return { success: true, prdId: id };
-    },
-  });
-}
+      for (const [i, criterion] of acceptanceCriteria.entries()) {
+        const userStoryId =
+          criterion.userStoryIndex != null ? storyIds[criterion.userStoryIndex] : undefined;
+        await runStep(step, "add-acceptance-criteria", { prdId, i, ...criterion }, () =>
+          prdService.createAcceptanceCriteria({
+            prdId,
+            description: criterion.description,
+            userStoryId,
+            orderIndex: i,
+          }),
+        );
+      }
 
-export function createAddUserStoryTool() {
-  return createTool({
-    name: "add_user_story",
-    description:
-      "Add a user story to the PRD created by create_prd. Call once per distinct user-facing capability.",
-    parameters: z.object({
-      asA: z
-        .string()
-        .max(160)
-        .optional()
-        .describe("The role of the user, e.g. 'a logged-in admin'"),
-      iWant: z.string().optional().describe("The capability they want"),
-      soThat: z.string().optional().describe("The benefit they get from it"),
-      narrative: z
-        .string()
-        .optional()
-        .describe("Freeform narrative, if asA/iWant/soThat don't fit"),
-      orderIndex: z
-        .number()
-        .int()
-        .optional()
-        .describe("Order this story should appear in, starting at 0, most foundational first"),
-    }),
-    handler: async (input, { network, step }) => {
-      const prdId = network.state.data.prdId as string | undefined;
-      if (!prdId) throw new Error("create_prd must be called before add_user_story");
+      network.state.data.prdId = prdId;
 
-      const { id } = await runStep(step, "add-user-story", { prdId, ...input }, () =>
-        prdService.createUserStory({ prdId, ...input }),
-      );
-
-      return { success: true, id };
-    },
-  });
-}
-
-export function createAddAcceptanceCriteriaTool() {
-  return createTool({
-    name: "add_acceptance_criteria",
-    description: "Add a testable, binary acceptance criterion to the PRD created by create_prd.",
-    parameters: z.object({
-      description: z
-        .string()
-        .min(1)
-        .describe(
-          "A testable, pass/fail condition that must hold for the feature to be considered done",
-        ),
-      userStoryId: z
-        .uuid()
-        .optional()
-        .describe(
-          "The user story this criterion verifies, when there is a clear one-to-one mapping",
-        ),
-      orderIndex: z.number().int().optional(),
-    }),
-    handler: async (input, { network, step }) => {
-      const prdId = network.state.data.prdId as string | undefined;
-      if (!prdId) throw new Error("create_prd must be called before add_acceptance_criteria");
-
-      const { id } = await runStep(step, "add-acceptance-criteria", { prdId, ...input }, () =>
-        prdService.createAcceptanceCriteria({ prdId, ...input }),
-      );
-
-      return { success: true, id };
+      return { success: true, prdId, userStoryCount: storyIds.length };
     },
   });
 }

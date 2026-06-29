@@ -76,7 +76,7 @@ export function useUpdatePrd() {
     status,
   } = trpc.prd.updatePrd.useMutation({
     onSuccess: async () => {
-      await utils.prd.listPrds.invalidate();
+      await Promise.all([utils.prd.listPrds.invalidate(), utils.prd.getPrdById.invalidate()]);
     },
   });
   return { updatePrdAsync, error, isError, isIdle, isPending, isSuccess, status };

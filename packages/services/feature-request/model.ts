@@ -17,6 +17,7 @@ export const buildDecisionSchema = z.enum(buildDecisionEnum.enumValues);
 export const createFeatureRequestInput = z.object({
   organizationId: z.uuid().describe("id of the organization"),
   projectId: z.uuid().describe("id of the project").optional(),
+  repositoryId: z.uuid().describe("id of the target repository (AI code context)").optional(),
   title: z.string().min(1).max(200).describe("title of the feature request"),
   description: z.string().min(1).describe("description of the feature request"),
   source: featureRequestSourceSchema.optional(),

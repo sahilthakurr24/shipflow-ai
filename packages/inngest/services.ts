@@ -6,6 +6,7 @@ import WorkflowService from "@repo/services/workflow";
 import PullRequestService from "@repo/services/pull-request";
 import WebhookService from "@repo/services/webhook";
 import GithubService from "@repo/services/github";
+import RepositoryService from "@repo/services/repository";
 
 export const featureRequestService = new FeatureRequestService();
 export const prdService = new PrdService();
@@ -15,3 +16,4 @@ export const workflowService = new WorkflowService();
 export const pullRequestService = new PullRequestService();
 export const webhookService = new WebhookService();
 export const githubService = new GithubService();
+export const repositoryService = new RepositoryService();

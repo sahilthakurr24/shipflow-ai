@@ -1,0 +1,2 @@
+ALTER TABLE "feature_requests" ADD COLUMN "repository_id" uuid;--> statement-breakpoint
+ALTER TABLE "feature_requests" ADD CONSTRAINT "feature_requests_repository_id_repositories_id_fk" FOREIGN KEY ("repository_id") REFERENCES "public"."repositories"("id") ON DELETE set null ON UPDATE no action;

@@ -20,6 +20,7 @@ export const featureRequestSchema = z.object({
   id: z.string(),
   organizationId: z.string(),
   projectId: z.string().nullable(),
+  repositoryId: z.string().nullable(),
   title: z.string(),
   description: z.string(),
   source: featureRequestSourceSchema,

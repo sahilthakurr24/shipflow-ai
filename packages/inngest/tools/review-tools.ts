@@ -29,20 +29,20 @@ export function createReportIssueTool(reviewId: string): Tool.Any {
         .describe("What's wrong, with the exact filePath/lineStart/lineEnd it occurs at"),
       rationale: z
         .string()
-        .optional()
-        .describe("Why it matters — what breaks or what risk it creates"),
+        .nullable()
+        .describe("Why it matters — what breaks or what risk it creates; null if obvious"),
       suggestion: z
         .string()
-        .optional()
-        .describe("A concrete fix, not just 'consider improving this'"),
-      filePath: z.string().optional(),
-      lineStart: z.number().int().optional(),
-      lineEnd: z.number().int().optional(),
+        .nullable()
+        .describe("A concrete fix, not just 'consider improving this'; null if none"),
+      filePath: z.string().nullable(),
+      lineStart: z.number().int().nullable(),
+      lineEnd: z.number().int().nullable(),
       acceptanceCriteriaId: z
         .uuid()
-        .optional()
-        .describe("Set when category is acceptance_criteria"),
-      taskId: z.uuid().optional().describe("Set when category is engineering_task"),
+        .nullable()
+        .describe("Set when category is acceptance_criteria, else null"),
+      taskId: z.uuid().nullable().describe("Set when category is engineering_task, else null"),
     }),
     handler: async (input, { step }) => {
       const { id } = await runStep(step, "report-issue", { reviewId, ...input }, () =>

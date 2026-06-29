@@ -3,6 +3,7 @@ import { NonRetriableError } from "inngest";
 import { createTaskPlannerAgent } from "../agents/task-planner";
 import { inngest } from "../client";
 import { prdService } from "../services";
+import { getFeatureRequestRepoContext, withRepoContext } from "../utils/repo-context";
 import { runTrackedWorkflow } from "../utils/workflow-run";
 
 type Prd = {
@@ -26,6 +27,7 @@ function buildPrompt(
   prd: Prd,
   userStories: UserStory[],
   acceptanceCriteria: AcceptanceCriterion[],
+  repoContext: string,
 ) {
   const storiesText = userStories.length
     ? userStories
@@ -44,7 +46,8 @@ function buildPrompt(
         .join("\n")
     : "(no acceptance criteria)";
 
-  return `PRD: ${prd.title}
+  return withRepoContext(
+    `PRD: ${prd.title}
 Problem statement: ${prd.problemStatement ?? "(none)"}
 Goals: ${(prd.goals ?? []).join("; ") || "(none)"}
 Non-goals: ${(prd.nonGoals ?? []).join("; ") || "(none)"}
@@ -55,7 +58,9 @@ User stories:
 ${storiesText}
 
 Acceptance criteria:
-${criteriaText}`;
+${criteriaText}`,
+    repoContext,
+  );
 }
 
 export const taskGenerationFunction = inngest.createFunction(
@@ -81,12 +86,19 @@ export const taskGenerationFunction = inngest.createFunction(
           prdService.listAcceptanceCriteria({ prdId }),
         );
 
+        const repoContext = await step.run("get-repo-context", () =>
+          getFeatureRequestRepoContext(featureRequestId),
+        );
+
         const agent = createTaskPlannerAgent({ organizationId, featureRequestId, prdId });
         const state = createState();
-        await agent.run(buildPrompt(prd, userStories, acceptanceCriteria), {
+        // maxIter: 1 — the planner emits every task in a single forced create_tasks
+        // call, so there is no second inference (which agent-kit would send without
+        // the tool-result message, causing an OpenAI 400).
+        await agent.run(buildPrompt(prd, userStories, acceptanceCriteria, repoContext), {
           state,
           step,
-          maxIter: 10,
+          maxIter: 1,
         });
 
         return { prdId };

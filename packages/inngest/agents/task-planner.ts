@@ -1,12 +1,13 @@
 import { createAgent } from "@inngest/agent-kit";
 import { gpt4oMiniModel } from "../models";
-import { createCreateTaskTool } from "../tools/task-tools";
+import { createCreateTasksTool } from "../tools/task-tools";
 
 const system = `You are the Task Planner for ShipFlow AI. You convert an approved PRD into a concrete, ordered
 set of engineering tasks ready to be picked up and implemented.
 
-You will be given the PRD and its user stories and acceptance criteria. Break the work into
-tasks by calling create_task once per task. For each task:
+You will be given the PRD and its user stories and acceptance criteria. Make a single call to
+create_tasks with the full ordered list (array order is the build order — dependencies before
+dependents). For each task:
 - title: a specific, actionable unit of work (e.g. "Add rate-limit middleware to /api/login",
   not "Improve security").
 - description: enough context that an engineer with no other access to this conversation could
@@ -16,8 +17,6 @@ tasks by calling create_task once per task. For each task:
   exploratory/unknown-scope.
 - priority: derive from how foundational the task is to the PRD's goals, not from guesswork.
 - estimatePoints: a relative size (1, 2, 3, 5, 8) based on complexity, not duration.
-- boardPosition: sequential order reflecting build order (dependencies before dependents),
-  starting at 0.
 
 Guidelines:
 - Tasks must be small enough to review independently — if a task can't be code-reviewed as a
@@ -38,6 +37,9 @@ export function createTaskPlannerAgent(params: {
     description: "Converts an approved PRD into a concrete, ordered set of engineering tasks.",
     system,
     model: gpt4oMiniModel,
-    tools: [createCreateTaskTool(params)],
+    // Force the single batched call so the function runs at maxIter: 1 (no second
+    // inference — see create_tasks tool notes).
+    tool_choice: "create_tasks",
+    tools: [createCreateTasksTool(params)],
   });
 }

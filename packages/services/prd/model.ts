@@ -49,26 +49,47 @@ export const approvePrdInput = z.object({
 });
 export type ApprovePrdInputType = z.infer<typeof approvePrdInput>;
 
+// These come from a strict-mode LLM tool, which sends explicit `null` to omit a
+// value (it cannot omit keys). Normalize null → undefined so Drizzle leaves the
+// column to its default (notably orderIndex is NOT NULL DEFAULT 0).
+const optionalString = z
+  .string()
+  .nullish()
+  .transform((v) => v ?? undefined);
+const optionalOrderIndex = z
+  .number()
+  .int()
+  .nullish()
+  .transform((v) => v ?? undefined);
+
 export const createUserStoryInput = z.object({
   prdId: z.uuid().describe("id of the PRD"),
-  asA: z.string().max(160).optional(),
-  iWant: z.string().optional(),
-  soThat: z.string().optional(),
-  narrative: z.string().optional(),
-  orderIndex: z.number().int().optional(),
+  asA: z
+    .string()
+    .max(160)
+    .nullish()
+    .transform((v) => v ?? undefined),
+  iWant: optionalString,
+  soThat: optionalString,
+  narrative: optionalString,
+  orderIndex: optionalOrderIndex,
 });
-export type CreateUserStoryInputType = z.infer<typeof createUserStoryInput>;
+// z.input (pre-parse) so callers may pass null; normalized to undefined on parse.
+export type CreateUserStoryInputType = z.input<typeof createUserStoryInput>;
 
 export const listUserStoriesInput = z.object({ prdId: z.uuid().describe("id of the PRD") });
 export type ListUserStoriesInputType = z.infer<typeof listUserStoriesInput>;
 
 export const createAcceptanceCriteriaInput = z.object({
   prdId: z.uuid().describe("id of the PRD"),
-  userStoryId: z.uuid().optional(),
+  userStoryId: z
+    .uuid()
+    .nullish()
+    .transform((v) => v ?? undefined),
   description: z.string().min(1).describe("acceptance criterion"),
-  orderIndex: z.number().int().optional(),
+  orderIndex: optionalOrderIndex,
 });
-export type CreateAcceptanceCriteriaInputType = z.infer<typeof createAcceptanceCriteriaInput>;
+export type CreateAcceptanceCriteriaInputType = z.input<typeof createAcceptanceCriteriaInput>;
 
 export const listAcceptanceCriteriaInput = z.object({ prdId: z.uuid().describe("id of the PRD") });
 export type ListAcceptanceCriteriaInputType = z.infer<typeof listAcceptanceCriteriaInput>;

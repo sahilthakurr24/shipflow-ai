@@ -5,6 +5,8 @@ import {
   CreateTaskInputType,
   listTasksInput,
   ListTasksInputType,
+  moveTaskInput,
+  MoveTaskInputType,
   taskIdInput,
   TaskIdInputType,
   updateTaskInput,
@@ -58,6 +60,35 @@ class TaskService {
     const { id } = await taskIdInput.parseAsync(payload);
 
     await db.delete(tasksTable).where(eq(tasksTable.id, id));
+  }
+
+  /**
+   * Moves a task to a column (`status`) and reindexes that column's order in a
+   * single transaction. `organizationId` is server-supplied (from the loaded
+   * task) and scopes every write so a crafted `orderedIds` can't touch another
+   * org's rows.
+   */
+  public async moveTask(payload: MoveTaskInputType & { organizationId: string }) {
+    const { taskId, status, orderedIds } = await moveTaskInput.parseAsync(payload);
+    const { organizationId } = payload;
+
+    await db.transaction(async (tx) => {
+      await tx
+        .update(tasksTable)
+        .set({ status })
+        .where(and(eq(tasksTable.id, taskId), eq(tasksTable.organizationId, organizationId)));
+
+      for (let i = 0; i < orderedIds.length; i++) {
+        await tx
+          .update(tasksTable)
+          .set({ boardPosition: i })
+          .where(
+            and(eq(tasksTable.id, orderedIds[i]!), eq(tasksTable.organizationId, organizationId)),
+          );
+      }
+    });
+
+    return { id: taskId };
   }
 }
 

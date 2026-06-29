@@ -6,6 +6,8 @@ export {
   taskIdInput,
   listTasksInput,
   updateTaskInput,
+  moveTaskInput,
+  generateTasksInput,
 } from "@repo/services/task/model";
 
 export const taskSchema = z.object({
@@ -32,3 +34,5 @@ export const getTaskOutput = z.object({ task: taskSchema.optional() });
 export const listTasksOutput = z.object({ tasks: z.array(taskSchema) });
 export const updateTaskOutput = z.object({ id: z.string().optional() });
 export const deleteTaskOutput = z.object({ success: z.boolean() });
+export const moveTaskOutput = z.object({ id: z.string().optional() });
+export const generateTasksOutput = z.object({ success: z.boolean() });

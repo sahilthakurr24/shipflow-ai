@@ -41,3 +41,41 @@ export const completeGithubInstallationInput = z.object({
   organizationId: z.string().describe("id of the organization"),
 });
 export const completeGithubInstallationOutput = z.object({ count: z.number() });
+
+// --- repo detail (live GitHub data, keyed by our repository id) ---
+
+export const repositoryDetailInput = z.object({
+  repositoryId: z.uuid().describe("id of the connected repository"),
+});
+
+export const branchSchema = z.object({
+  name: z.string(),
+  isProtected: z.boolean(),
+  commitSha: z.string(),
+});
+export const getRepoBranchesOutput = z.object({ branches: z.array(branchSchema) });
+
+export const commitSchema = z.object({
+  sha: z.string(),
+  message: z.string(),
+  authorName: z.string(),
+  authorLogin: z.string().optional(),
+  authorAvatar: z.string().optional(),
+  date: z.string().optional(),
+  htmlUrl: z.string(),
+});
+export const getRepoCommitsOutput = z.object({ commits: z.array(commitSchema) });
+
+export const openPullRequestSchema = z.object({
+  number: z.number(),
+  title: z.string(),
+  authorLogin: z.string().optional(),
+  headBranch: z.string(),
+  baseBranch: z.string(),
+  htmlUrl: z.string(),
+  createdAt: z.string(),
+  isDraft: z.boolean(),
+});
+export const getRepoOpenPullRequestsOutput = z.object({
+  pullRequests: z.array(openPullRequestSchema),
+});

@@ -108,6 +108,7 @@ export const taskStatusEnum = pgEnum("task_status", [
   "todo",
   "in_progress",
   "in_review",
+  "testing",
   "blocked",
   "done",
 ]);

@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
+import { inngest } from "@repo/inngest";
 
-import { taskService } from "../../services";
+import { prdService, taskService } from "../../services";
 import { authenticatedProcedure, router } from "../../trpc";
 import { assertOrgAccess } from "../../utils/authz";
 import { generatePath } from "../../utils/path-generator";
@@ -8,9 +9,13 @@ import {
   createTaskInput,
   createTaskOutput,
   deleteTaskOutput,
+  generateTasksInput,
+  generateTasksOutput,
   getTaskOutput,
   listTasksInput,
   listTasksOutput,
+  moveTaskInput,
+  moveTaskOutput,
   taskIdInput,
   updateTaskInput,
   updateTaskOutput,
@@ -90,6 +95,48 @@ export const taskRouter = router({
 
       await assertOrgAccess(ctx.userId, task.organizationId, MANAGE_ROLES);
       await taskService.deleteTask(input);
+
+      return { success: true };
+    }),
+
+  moveTask: authenticatedProcedure
+    .meta({ openapi: { method: "POST", path: getPath("/move"), tags: TAGS } })
+    .input(moveTaskInput)
+    .output(moveTaskOutput)
+    .mutation(async ({ ctx, input }) => {
+      const { task } = await taskService.getTaskById({ id: input.taskId });
+
+      if (!task) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Task not found." });
+      }
+
+      await assertOrgAccess(ctx.userId, task.organizationId);
+
+      // organizationId is server-supplied so the reindex is scoped to this org.
+      return taskService.moveTask({ ...input, organizationId: task.organizationId });
+    }),
+
+  generateTasks: authenticatedProcedure
+    .meta({ openapi: { method: "POST", path: getPath("/generate"), tags: TAGS } })
+    .input(generateTasksInput)
+    .output(generateTasksOutput)
+    .mutation(async ({ ctx, input }) => {
+      const { prd } = await prdService.getPrdById({ id: input.prdId });
+
+      if (!prd) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "PRD not found." });
+      }
+
+      await assertOrgAccess(ctx.userId, prd.organizationId, MANAGE_ROLES);
+
+      await inngest.send({
+        name: "prd/tasks.requested",
+        data: {
+          prdId: prd.id,
+          organizationId: prd.organizationId,
+          featureRequestId: prd.featureRequestId,
+        },
+      });
 
       return { success: true };
     }),
