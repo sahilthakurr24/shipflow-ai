@@ -10,6 +10,13 @@ import { pgEnum } from "drizzle-orm/pg-core";
 // ---------------------------------------------------------------------------
 export const memberRoleEnum = pgEnum("member_role", ["owner", "admin", "member", "viewer"]);
 
+export const invitationStatusEnum = pgEnum("invitation_status", [
+  "pending",
+  "accepted",
+  "revoked",
+  "expired",
+]);
+
 export const planTierEnum = pgEnum("plan_tier", ["free", "pro", "enterprise"]);
 
 export const subscriptionStatusEnum = pgEnum("subscription_status", [

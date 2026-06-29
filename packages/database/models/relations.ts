@@ -4,6 +4,7 @@ import { approvalsTable } from "./approval";
 import { accountsTable, sessionsTable } from "./auth";
 import { paymentsTable, subscriptionsTable, usageRecordsTable } from "./billing";
 import { clarificationMessagesTable, featureRequestsTable } from "./feature-request";
+import { invitationsTable } from "./invitation";
 import { membershipsTable, organizationsTable } from "./organization";
 import { acceptanceCriteriaTable, prdsTable, userStoriesTable } from "./prd";
 import { projectsTable } from "./project";
@@ -25,6 +26,7 @@ export const usersRelations = relations(usersTable, ({ many }) => ({
   memberships: many(membershipsTable),
   sessions: many(sessionsTable),
   accounts: many(accountsTable),
+  sentInvitations: many(invitationsTable),
 }));
 
 export const sessionsRelations = relations(sessionsTable, ({ one }) => ({
@@ -43,6 +45,7 @@ export const accountsRelations = relations(accountsTable, ({ one }) => ({
 
 export const organizationsRelations = relations(organizationsTable, ({ many, one }) => ({
   memberships: many(membershipsTable),
+  invitations: many(invitationsTable),
   projects: many(projectsTable),
   repositories: many(repositoriesTable),
   featureRequests: many(featureRequestsTable),
@@ -56,6 +59,17 @@ export const organizationsRelations = relations(organizationsTable, ({ many, one
   usageRecords: many(usageRecordsTable),
   workflowRuns: many(workflowRunsTable),
   subscription: one(subscriptionsTable),
+}));
+
+export const invitationsRelations = relations(invitationsTable, ({ one }) => ({
+  organization: one(organizationsTable, {
+    fields: [invitationsTable.organizationId],
+    references: [organizationsTable.id],
+  }),
+  invitedBy: one(usersTable, {
+    fields: [invitationsTable.invitedByUserId],
+    references: [usersTable.id],
+  }),
 }));
 
 export const membershipsRelations = relations(membershipsTable, ({ one }) => ({

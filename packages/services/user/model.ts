@@ -34,3 +34,4 @@ export const updateUserInput = z.object({
 });
 
 export type UpdateUserInputType = z.infer<typeof updateUserInput>;
+

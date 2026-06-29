@@ -5,6 +5,7 @@ export * from "./models/enums";
 export * from "./models/user";
 export * from "./models/auth";
 export * from "./models/organization";
+export * from "./models/invitation";
 
 // Product structure
 export * from "./models/project";
