@@ -2,7 +2,7 @@ import { createState } from "@inngest/agent-kit";
 import { NonRetriableError } from "inngest";
 import { createTaskPlannerAgent } from "../agents/task-planner";
 import { inngest } from "../client";
-import { prdService } from "../services";
+import { featureRequestService, prdService } from "../services";
 import { getFeatureRequestRepoContext, withRepoContext } from "../utils/repo-context";
 import { runTrackedWorkflow } from "../utils/workflow-run";
 
@@ -79,6 +79,12 @@ export const taskGenerationFunction = inngest.createFunction(
         const { prd } = await step.run("get-prd", () => prdService.getPrdById({ id: prdId }));
         if (!prd) throw new NonRetriableError("PRD not found");
 
+        // Tasks inherit the feature request's project so they land in its board.
+        const { featureRequest } = await step.run("get-feature-request", () =>
+          featureRequestService.getFeatureRequestById({ id: featureRequestId }),
+        );
+        const projectId = featureRequest?.projectId ?? undefined;
+
         const { userStories } = await step.run("list-user-stories", () =>
           prdService.listUserStories({ prdId }),
         );
@@ -90,7 +96,7 @@ export const taskGenerationFunction = inngest.createFunction(
           getFeatureRequestRepoContext(featureRequestId),
         );
 
-        const agent = createTaskPlannerAgent({ organizationId, featureRequestId, prdId });
+        const agent = createTaskPlannerAgent({ organizationId, featureRequestId, prdId, projectId });
         const state = createState();
         // maxIter: 1 — the planner emits every task in a single forced create_tasks
         // call, so there is no second inference (which agent-kit would send without

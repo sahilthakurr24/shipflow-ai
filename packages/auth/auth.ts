@@ -34,6 +34,16 @@ export const auth = betterAuth({
       image: "profileImageUrl",
     },
   },
+  // Allow linking a GitHub account to an existing user even when its email
+  // differs from the app login (members link their own GitHub to author PRs).
+  // Without this, linkSocial fails with `unable_to_link_account` on email mismatch.
+  account: {
+    accountLinking: {
+      enabled: true,
+      trustedProviders: ["github"],
+      allowDifferentEmails: true,
+    },
+  },
   emailAndPassword: {
     enabled: true,
   },

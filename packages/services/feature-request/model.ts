@@ -38,6 +38,7 @@ export type FeatureRequestIdInputType = z.infer<typeof featureRequestIdInput>;
 
 export const listFeatureRequestsInput = z.object({
   organizationId: z.uuid().describe("id of the organization"),
+  projectId: z.uuid().optional().describe("scope to a project"),
 });
 
 export type ListFeatureRequestsInputType = z.infer<typeof listFeatureRequestsInput>;

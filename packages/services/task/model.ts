@@ -36,6 +36,7 @@ export type TaskIdInputType = z.infer<typeof taskIdInput>;
 export const listTasksInput = z.object({
   organizationId: z.uuid().describe("id of the organization"),
   featureRequestId: z.uuid().optional(),
+  projectId: z.uuid().optional().describe("scope to a project"),
 });
 export type ListTasksInputType = z.infer<typeof listTasksInput>;
 

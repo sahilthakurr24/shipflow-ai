@@ -14,6 +14,7 @@ import BillingService from "@repo/services/billing";
 import WebhookService from "@repo/services/webhook";
 import WorkflowService from "@repo/services/workflow";
 import GithubService from "@repo/services/github";
+import InvitationService  from '@repo/services/invitation';
 
 export const userService = new UserService();
 export const organizationService = new OrganizationService();
@@ -31,3 +32,4 @@ export const billingService = new BillingService();
 export const webhookService = new WebhookService();
 export const workflowService = new WorkflowService();
 export const githubService = new GithubService();
+export const invitationService = new InvitationService();

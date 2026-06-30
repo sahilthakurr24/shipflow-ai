@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { skipToken } from "@tanstack/react-query";
 import { Check, ChevronRight, FileText } from "lucide-react";
 
@@ -12,8 +13,9 @@ import { useOrganization } from "~/providers/organization";
 
 export default function PrdsPage() {
   const { activeOrgId } = useOrganization();
+  const projectId = useParams<{ id: string }>().id;
   const { prds, isLoading, error } = useListPrds(
-    activeOrgId ? { organizationId: activeOrgId } : skipToken,
+    activeOrgId ? { organizationId: activeOrgId, projectId } : skipToken,
   );
   const isError = Boolean(error);
 
@@ -63,7 +65,7 @@ export default function PrdsPage() {
           {sorted.map((prd) => (
             <Link
               key={prd.id}
-              href={`/dashboard/prds/${prd.id}`}
+              href={`/dashboard/projects/${projectId}/prds/${prd.id}`}
               className="group focus-visible:ring-ring block rounded-xl focus-visible:ring-2 focus-visible:outline-none"
             >
               <Card className="hover:border-foreground/20 transition-all hover:shadow-md">

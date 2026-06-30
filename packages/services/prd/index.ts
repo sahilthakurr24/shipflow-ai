@@ -1,5 +1,10 @@
-import { db, and, eq } from "@repo/database";
-import { acceptanceCriteriaTable, prdsTable, userStoriesTable } from "@repo/database/schema";
+import { db, and, eq, getTableColumns } from "@repo/database";
+import {
+  acceptanceCriteriaTable,
+  featureRequestsTable,
+  prdsTable,
+  userStoriesTable,
+} from "@repo/database/schema";
 import {
   approvePrdInput,
   ApprovePrdInputType,
@@ -39,10 +44,22 @@ class PrdService {
   }
 
   public async listPrds(payload: ListPrdsInputType) {
-    const { organizationId, featureRequestId } = await listPrdsInput.parseAsync(payload);
+    const { organizationId, featureRequestId, projectId } =
+      await listPrdsInput.parseAsync(payload);
 
     const conditions = [eq(prdsTable.organizationId, organizationId)];
     if (featureRequestId) conditions.push(eq(prdsTable.featureRequestId, featureRequestId));
+
+    // PRDs carry no projectId — scope via their feature request's project.
+    if (projectId) {
+      const prds = await db
+        .select(getTableColumns(prdsTable))
+        .from(prdsTable)
+        .innerJoin(featureRequestsTable, eq(prdsTable.featureRequestId, featureRequestsTable.id))
+        .where(and(...conditions, eq(featureRequestsTable.projectId, projectId)));
+
+      return { prds };
+    }
 
     const prds = await db
       .select()

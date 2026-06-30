@@ -116,6 +116,17 @@ export function useRequestReview() {
   return { requestReviewAsync, error, isError, isIdle, isPending, isSuccess, status };
 }
 
+export function useSyncPullRequests() {
+  const utils = trpc.useUtils();
+  const { mutateAsync: syncPullRequestsAsync, isPending } =
+    trpc.pullRequest.syncFromGithub.useMutation({
+      onSuccess: async () => {
+        await utils.pullRequest.listPullRequests.invalidate();
+      },
+    });
+  return { syncPullRequestsAsync, isPending };
+}
+
 export function useAddPullRequestFile() {
   const utils = trpc.useUtils();
   const {

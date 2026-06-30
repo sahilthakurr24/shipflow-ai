@@ -1,4 +1,4 @@
-// reload-nudge v6: forces tsx watch to re-import workspace packages (safe to delete)
+// reload-nudge v12: forces tsx watch to re-import workspace packages (safe to delete)
 import http from "node:http";
 import { logger } from "@repo/logger";
 import { app as expressApplication } from "./server";

@@ -19,6 +19,7 @@ export function createCreateTasksTool(params: {
   organizationId: string;
   featureRequestId: string;
   prdId?: string;
+  projectId?: string;
 }): Tool.Any {
   return createTool({
     name: "create_tasks",
@@ -68,6 +69,7 @@ export function createCreateTasksTool(params: {
             organizationId: params.organizationId,
             featureRequestId: params.featureRequestId,
             prdId: params.prdId,
+            projectId: params.projectId,
             createdByAgent: true,
             boardPosition: i,
             ...task,

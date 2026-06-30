@@ -1,33 +1,70 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { skipToken } from "@tanstack/react-query";
-import { ChevronRight, GitPullRequest } from "lucide-react";
+import { ChevronRight, GitPullRequest, RefreshCw } from "lucide-react";
 
 import { PrStateBadge, timeAgo } from "~/components/pull-request/shared";
+import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { Skeleton } from "~/components/ui/skeleton";
-import { useListPullRequests } from "~/hooks/api/pull-request";
+import { useListPullRequests, useSyncPullRequests } from "~/hooks/api/pull-request";
+import { useListRepositories } from "~/hooks/api/repository";
 import { useOrganization } from "~/providers/organization";
+import { cn } from "~/lib/utils";
+import { useParams } from "next/navigation";
 
 export default function PullRequestsPage() {
   const { activeOrgId } = useOrganization();
-  const { pullRequests, isLoading, error } = useListPullRequests(
+  const projectId = useParams<{ id: string }>().id;
+  const { repositories } = useListRepositories(
     activeOrgId ? { organizationId: activeOrgId } : skipToken,
   );
+  const projectRepoId = repositories.find((r) => r.projectId === projectId)?.id;
+
+  const { pullRequests, isLoading, error } = useListPullRequests(
+    activeOrgId && projectRepoId
+      ? { organizationId: activeOrgId, repositoryId: projectRepoId }
+      : skipToken,
+  );
+  const { syncPullRequestsAsync, isPending: isSyncing } = useSyncPullRequests();
   const isError = Boolean(error);
 
-  const sorted = [...pullRequests].sort(
-    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-  );
+  const sync = React.useCallback(() => {
+    if (!activeOrgId) return;
+    void syncPullRequestsAsync({ organizationId: activeOrgId }).catch(() => {
+      // Surfaced by the empty/error states; sync failures shouldn't crash the page.
+    });
+  }, [activeOrgId, syncPullRequestsAsync]);
+
+  // Auto-import open PRs from GitHub once when the page opens for an org.
+  const syncedOrg = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (activeOrgId && syncedOrg.current !== activeOrgId) {
+      syncedOrg.current = activeOrgId;
+      sync();
+    }
+  }, [activeOrgId, sync]);
+
+  // Show open PRs only.
+  const sorted = [...pullRequests]
+    .filter((pr) => pr.state === "open")
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
   return (
     <div className="flex flex-col gap-6">
-      <header>
-        <h2 className="text-2xl font-semibold tracking-tight">Pull Requests</h2>
-        <p className="text-muted-foreground text-sm">
-          PRs from your connected repositories, with their AI review.
-        </p>
+      <header className="flex items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight">Pull Requests</h2>
+          <p className="text-muted-foreground text-sm">
+            Open PRs from your connected repositories, with their AI review.
+          </p>
+        </div>
+        <Button variant="outline" onClick={sync} disabled={!activeOrgId || isSyncing}>
+          <RefreshCw className={cn("size-4", isSyncing && "animate-spin")} />
+          {isSyncing ? "Syncing…" : "Sync"}
+        </Button>
       </header>
 
       {!activeOrgId ? (
@@ -51,11 +88,21 @@ export default function PullRequestsPage() {
       ) : sorted.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-            <GitPullRequest className="text-muted-foreground size-6" />
-            <p className="font-medium">No pull requests yet</p>
-            <p className="text-muted-foreground max-w-sm text-sm">
-              Open a PR on a connected GitHub repository and it&apos;ll appear here for AI review.
-            </p>
+            {isSyncing ? (
+              <>
+                <RefreshCw className="text-muted-foreground size-6 animate-spin" />
+                <p className="text-muted-foreground text-sm">Syncing open PRs from GitHub…</p>
+              </>
+            ) : (
+              <>
+                <GitPullRequest className="text-muted-foreground size-6" />
+                <p className="font-medium">No open pull requests</p>
+                <p className="text-muted-foreground max-w-sm text-sm">
+                  Open a PR on a connected GitHub repository, then hit Sync — it&apos;ll appear here
+                  for AI review.
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -63,7 +110,7 @@ export default function PullRequestsPage() {
           {sorted.map((pr) => (
             <Link
               key={pr.id}
-              href={`/dashboard/pull-requests/${pr.id}`}
+              href={`/dashboard/projects/${projectId}/pull-requests/${pr.id}`}
               className="group focus-visible:ring-ring block rounded-xl focus-visible:ring-2 focus-visible:outline-none"
             >
               <Card className="hover:border-foreground/20 transition-all hover:shadow-md">

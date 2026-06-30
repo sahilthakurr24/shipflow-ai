@@ -201,10 +201,10 @@ export function TaskDrawer({
             </Field>
           ) : null}
 
-          {task.prdId ? (
+          {task.prdId && task.projectId ? (
             <Field label="Linked PRD">
               <Button asChild variant="outline" size="sm" className="self-start">
-                <Link href={`/dashboard/prds/${task.prdId}`}>
+                <Link href={`/dashboard/projects/${task.projectId}/prds/${task.prdId}`}>
                   Open PRD
                   <ArrowUpRight className="size-4" />
                 </Link>

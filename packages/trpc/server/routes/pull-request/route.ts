@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { inngest } from "@repo/inngest";
 
-import { pullRequestService } from "../../services";
+import { githubService, pullRequestService, repositoryService } from "../../services";
 import { authenticatedProcedure, router } from "../../trpc";
 import { assertOrgAccess } from "../../utils/authz";
 import { generatePath } from "../../utils/path-generator";
@@ -18,6 +18,8 @@ import {
   listPullRequestsOutput,
   pullRequestIdInput,
   requestReviewOutput,
+  syncFromGithubInput,
+  syncFromGithubOutput,
   updatePullRequestInput,
   updatePullRequestOutput,
 } from "./model";
@@ -124,6 +126,54 @@ export const pullRequestRouter = router({
       });
 
       return { success: true };
+    }),
+
+  // Imports the org's open PRs from GitHub into the section (backfill + a fix for
+  // missed webhook deliveries). Idempotent: snapshotPullRequest upserts per
+  // (repositoryId, githubPrNumber). The webhook still handles new events live.
+  syncFromGithub: authenticatedProcedure
+    .meta({ openapi: { method: "POST", path: getPath("/sync"), tags: TAGS } })
+    .input(syncFromGithubInput)
+    .output(syncFromGithubOutput)
+    .mutation(async ({ ctx, input }) => {
+      await assertOrgAccess(ctx.userId, input.organizationId);
+
+      const { repositories } = await repositoryService.listRepositories({
+        organizationId: input.organizationId,
+      });
+
+      let imported = 0;
+      for (const repository of repositories) {
+        if (!repository.githubInstallationId) continue;
+        const repoRef = {
+          installationId: repository.githubInstallationId,
+          owner: repository.owner,
+          repo: repository.name,
+        };
+
+        // One bad/stale installation shouldn't abort the whole sync.
+        try {
+          const { pullRequests } = await githubService.listOpenPullRequests(repoRef);
+
+          for (const pr of pullRequests) {
+            const ref = { ...repoRef, pullNumber: pr.number };
+            const { pullRequest } = await githubService.getPullRequest(ref);
+            const { files } = await githubService.listPullRequestFiles(ref);
+
+            await pullRequestService.snapshotPullRequest({
+              organizationId: input.organizationId,
+              repositoryId: repository.id,
+              ...pullRequest,
+              files,
+            });
+            imported += 1;
+          }
+        } catch {
+          // Skip this repo; continue with the rest.
+        }
+      }
+
+      return { imported };
     }),
 
   addPullRequestFile: authenticatedProcedure

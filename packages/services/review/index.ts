@@ -1,5 +1,5 @@
-import { db, and, eq } from "@repo/database";
-import { reviewIssuesTable, reviewsTable } from "@repo/database/schema";
+import { db, and, eq, getTableColumns } from "@repo/database";
+import { pullRequestsTable, reviewIssuesTable, reviewsTable } from "@repo/database/schema";
 import {
   createReviewInput,
   CreateReviewInputType,
@@ -40,10 +40,22 @@ class ReviewService {
   }
 
   public async listReviews(payload: ListReviewsInputType) {
-    const { organizationId, pullRequestId } = await listReviewsInput.parseAsync(payload);
+    const { organizationId, pullRequestId, repositoryId } =
+      await listReviewsInput.parseAsync(payload);
 
     const conditions = [eq(reviewsTable.organizationId, organizationId)];
     if (pullRequestId) conditions.push(eq(reviewsTable.pullRequestId, pullRequestId));
+
+    // Scope to a repo via the PR (e.g. a project's connected repo).
+    if (repositoryId) {
+      const reviews = await db
+        .select(getTableColumns(reviewsTable))
+        .from(reviewsTable)
+        .innerJoin(pullRequestsTable, eq(reviewsTable.pullRequestId, pullRequestsTable.id))
+        .where(and(...conditions, eq(pullRequestsTable.repositoryId, repositoryId)));
+
+      return { reviews };
+    }
 
     const reviews = await db
       .select()

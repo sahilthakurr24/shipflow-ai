@@ -32,20 +32,26 @@ import { useOrganization } from "~/providers/organization";
 export function CreateFeatureRequestDialog({
   open,
   onOpenChange,
+  projectId,
+  projectRepositoryId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  // When inside a project, the FR belongs to it and uses the project's repo.
+  projectId?: string;
+  projectRepositoryId?: string;
 }) {
   const router = useRouter();
   const { activeOrgId } = useOrganization();
   const { repositories } = useListRepositories(
-    activeOrgId ? { organizationId: activeOrgId } : skipToken,
+    activeOrgId && !projectId ? { organizationId: activeOrgId } : skipToken,
   );
   const { createFeatureRequestAsync, isPending } = useCreateFeatureRequest();
 
   const [title, setTitle] = React.useState("");
   const [description, setDescription] = React.useState("");
-  const [repositoryId, setRepositoryId] = React.useState<string | undefined>(undefined);
+  const [pickedRepositoryId, setPickedRepositoryId] = React.useState<string | undefined>(undefined);
+  const repositoryId = projectId ? projectRepositoryId : pickedRepositoryId;
 
   const canSubmit =
     Boolean(activeOrgId) &&
@@ -60,6 +66,7 @@ export function CreateFeatureRequestDialog({
     try {
       const { id } = await createFeatureRequestAsync({
         organizationId: activeOrgId,
+        projectId,
         repositoryId,
         title: title.trim(),
         description: description.trim(),
@@ -68,8 +75,8 @@ export function CreateFeatureRequestDialog({
       onOpenChange(false);
       setTitle("");
       setDescription("");
-      setRepositoryId(undefined);
-      if (id) router.push(`/dashboard/feature-requests/${id}`);
+      setPickedRepositoryId(undefined);
+      if (id) router.push(`/dashboard/projects/${projectId}/feature-requests/${id}`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to create feature request");
     }
@@ -115,11 +122,11 @@ export function CreateFeatureRequestDialog({
               />
             </div>
 
-            <div className="grid gap-2">
+            <div className={projectId ? "hidden" : "grid gap-2"}>
               <Label htmlFor="fr-repo">Repository (code context)</Label>
               <Select
-                value={repositoryId}
-                onValueChange={setRepositoryId}
+                value={pickedRepositoryId}
+                onValueChange={setPickedRepositoryId}
                 disabled={isPending || repositories.length === 0}
               >
                 <SelectTrigger id="fr-repo">

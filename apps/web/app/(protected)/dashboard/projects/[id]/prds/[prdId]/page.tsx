@@ -146,8 +146,9 @@ function PrdSkeleton() {
 }
 
 function PrdDetail() {
-  const params = useParams<{ id: string }>();
-  const id = params.id;
+  const params = useParams<{ id: string; prdId: string }>();
+  const projectId = params.id;
+  const id = params.prdId;
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -187,7 +188,7 @@ function PrdDetail() {
   function exitEditing() {
     setIsEditing(false);
     setDraft(null);
-    if (searchParams.get("edit")) router.replace(`/dashboard/prds/${id}`);
+    if (searchParams.get("edit")) router.replace(`/dashboard/projects/${projectId}/prds/${id}`);
   }
 
   async function handleSave() {
@@ -241,7 +242,7 @@ function PrdDetail() {
       {/* Top bar */}
       <div className="flex items-center justify-between gap-3">
         <Link
-          href={`/dashboard/feature-requests/${prd.featureRequestId}`}
+          href={`/dashboard/projects/${projectId}/feature-requests/${prd.featureRequestId}`}
           className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-sm transition-colors"
         >
           <ArrowLeft className="size-4" />

@@ -31,6 +31,7 @@ export function createTaskPlannerAgent(params: {
   organizationId: string;
   featureRequestId: string;
   prdId?: string;
+  projectId?: string;
 }) {
   return createAgent({
     name: "task-planner",

@@ -13,6 +13,15 @@ export {
   listPullRequestFilesInput,
 } from "@repo/services/pull-request/model";
 
+// Import the org's open PRs from GitHub into the section.
+export const syncFromGithubInput = z.object({
+  organizationId: z.uuid().describe("id of the organization"),
+});
+
+export const syncFromGithubOutput = z.object({
+  imported: z.number(),
+});
+
 export const pullRequestSchema = z.object({
   id: z.string(),
   organizationId: z.string(),

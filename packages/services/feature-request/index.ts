@@ -1,4 +1,4 @@
-import { db, eq } from "@repo/database";
+import { db, and, eq } from "@repo/database";
 import { clarificationMessagesTable, featureRequestsTable } from "@repo/database/schema";
 import {
   addClarificationMessageInput,
@@ -39,12 +39,15 @@ class FeatureRequestService {
   }
 
   public async listFeatureRequests(payload: ListFeatureRequestsInputType) {
-    const { organizationId } = await listFeatureRequestsInput.parseAsync(payload);
+    const { organizationId, projectId } = await listFeatureRequestsInput.parseAsync(payload);
+
+    const conditions = [eq(featureRequestsTable.organizationId, organizationId)];
+    if (projectId) conditions.push(eq(featureRequestsTable.projectId, projectId));
 
     const featureRequests = await db
       .select()
       .from(featureRequestsTable)
-      .where(eq(featureRequestsTable.organizationId, organizationId));
+      .where(and(...conditions));
 
     return { featureRequests };
   }

@@ -21,12 +21,14 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { useOrganization } from "~/providers/organization";
 import { trpc } from "~/trpc/client";
+import { useParams } from "next/navigation";
 
 export default function TasksPage() {
   const { activeOrgId } = useOrganization();
+  const projectId = useParams<{ id: string }>().id;
 
   const tasksQuery = trpc.task.listTasks.useQuery(
-    activeOrgId ? { organizationId: activeOrgId } : skipToken,
+    activeOrgId ? { organizationId: activeOrgId, projectId } : skipToken,
     { refetchInterval: 3000, refetchOnWindowFocus: true },
   );
   const allTasks = React.useMemo(() => tasksQuery.data?.tasks ?? [], [tasksQuery.data]);
@@ -149,12 +151,14 @@ export default function TasksPage() {
             open={createOpen}
             onOpenChange={setCreateOpen}
             organizationId={activeOrgId}
+            projectId={projectId}
             defaultStatus={createStatus}
           />
           <GenerateTasksDialog
             open={generateOpen}
             onOpenChange={setGenerateOpen}
             organizationId={activeOrgId}
+            projectId={projectId}
           />
           <TaskDrawer task={selectedTask} open={drawerOpen} onOpenChange={setDrawerOpen} />
         </>

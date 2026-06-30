@@ -26,6 +26,7 @@ export type PrdIdInputType = z.infer<typeof prdIdInput>;
 export const listPrdsInput = z.object({
   organizationId: z.uuid().describe("id of the organization"),
   featureRequestId: z.uuid().optional(),
+  projectId: z.uuid().optional().describe("scope to a project (via the feature request)"),
 });
 export type ListPrdsInputType = z.infer<typeof listPrdsInput>;
 

@@ -46,11 +46,14 @@ function BulletList({ title, items }: { title: string; items: string[] }) {
 
 export function PrdSection({
   featureRequestId,
+  projectId,
   status,
 }: {
   featureRequestId: string;
+  projectId: string;
   status?: string;
 }) {
+  const prdBase = `/dashboard/projects/${projectId}/prds`;
   const { activeOrgId } = useOrganization();
   const isRejected = status ? REJECTED_STATUSES.has(status) : false;
   const isPrePrd = status ? PRE_PRD_STATUSES.has(status) : true;
@@ -106,13 +109,13 @@ export function PrdSection({
         </CardTitle>
         <div className="flex items-center gap-2">
           <Button asChild variant="ghost" size="sm">
-            <Link href={`/dashboard/prds/${prd.id}?edit=1`}>
+            <Link href={`${prdBase}/${prd.id}?edit=1`}>
               <Pencil className="size-4" />
               Edit
             </Link>
           </Button>
           <Button asChild variant="outline" size="sm">
-            <Link href={`/dashboard/prds/${prd.id}`}>
+            <Link href={`${prdBase}/${prd.id}`}>
               Open PRD
               <ArrowUpRight className="size-4" />
             </Link>

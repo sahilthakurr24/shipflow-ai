@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { skipToken } from "@tanstack/react-query";
 import { ChevronRight, Lightbulb, Loader2, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -41,6 +42,7 @@ type FeatureRequestListItem = {
 };
 
 function FeatureRequestRow({ fr }: { fr: FeatureRequestListItem }) {
+  const projectId = useParams<{ id: string }>().id;
   const [open, setOpen] = React.useState(false);
   const { deleteFeatureRequestAsync, isPending } = useDeleteFeatureRequest();
 
@@ -58,7 +60,7 @@ function FeatureRequestRow({ fr }: { fr: FeatureRequestListItem }) {
     <Card className="hover:border-foreground/20 group relative transition-all hover:shadow-md">
       {/* Full-card click target sits behind the content so the delete button stays usable. */}
       <Link
-        href={`/dashboard/feature-requests/${fr.id}`}
+        href={`/dashboard/projects/${projectId}/feature-requests/${fr.id}`}
         aria-label={fr.title}
         className="focus-visible:ring-ring absolute inset-0 z-0 rounded-xl focus-visible:ring-2 focus-visible:outline-none"
       />
@@ -121,10 +123,10 @@ function FeatureRequestRow({ fr }: { fr: FeatureRequestListItem }) {
 
 export default function FeatureRequestsPage() {
   const { activeOrgId } = useOrganization();
+  const projectId = useParams<{ id: string }>().id;
   const { featureRequests, isLoading, error } = useListFeatureRequests(
-    activeOrgId ? { organizationId: activeOrgId } : skipToken,
+    activeOrgId ? { organizationId: activeOrgId, projectId } : skipToken,
   );
-  // Feature requests are grounded in a repo, so a GitHub connection is required.
   const { repositories, isLoading: reposLoading } = useListRepositories(
     activeOrgId ? { organizationId: activeOrgId } : skipToken,
   );
@@ -133,7 +135,9 @@ export default function FeatureRequestsPage() {
   );
   const [createOpen, setCreateOpen] = React.useState(false);
   const isError = Boolean(error);
-  const hasGithub = repositories.length > 0;
+  // The project's connected repo grounds AI context for its feature requests.
+  const projectRepo = repositories.find((r) => r.projectId === projectId);
+  const hasGithub = Boolean(projectRepo);
   const loading = isLoading || reposLoading;
 
   const sorted = [...featureRequests].sort(
@@ -206,7 +210,12 @@ export default function FeatureRequestsPage() {
         list
       )}
 
-      <CreateFeatureRequestDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <CreateFeatureRequestDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        projectId={projectId}
+        projectRepositoryId={projectRepo?.id}
+      />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { healthRouter } from "./routes/health/route";
 import { authRouter } from "./routes/auth/route";
 import { organizationRouter } from "./routes/organization/route";
 import { membershipRouter } from "./routes/membership/route";
+import { invitationRouter } from "./routes/invitation/route";
 import { featureRequestRouter } from "./routes/feature-request/route";
 import { projectRouter } from "./routes/project/route";
 import { repositoryRouter } from "./routes/repository/route";
@@ -22,6 +23,7 @@ export const serverRouter = router({
   auth: authRouter,
   organization: organizationRouter,
   membership: membershipRouter,
+  invitation: invitationRouter,
   featureRequest: featureRequestRouter,
   project: projectRouter,
   repository: repositoryRouter,

@@ -42,15 +42,19 @@ export function CreateTaskDialog({
   open,
   onOpenChange,
   organizationId,
+  projectId,
   defaultStatus = "todo",
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   organizationId: string;
+  projectId?: string;
   defaultStatus?: BoardColumn["status"];
 }) {
   // defaultStatus falls back to "todo" — the board's first column.
-  const { featureRequests } = useListFeatureRequests(open ? { organizationId } : skipToken);
+  const { featureRequests } = useListFeatureRequests(
+    open ? { organizationId, projectId } : skipToken,
+  );
   const { createTaskAsync, isPending } = useCreateTask();
 
   const [title, setTitle] = React.useState("");
@@ -87,6 +91,7 @@ export function CreateTaskDialog({
     try {
       await createTaskAsync({
         organizationId,
+        projectId,
         featureRequestId,
         prdId,
         title: title.trim(),

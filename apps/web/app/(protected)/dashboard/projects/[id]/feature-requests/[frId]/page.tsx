@@ -31,8 +31,9 @@ const PRD_GENERATION_PHASES = [
 type ChatMessage = { id: string; role: "agent" | "user"; content: string };
 
 export default function FeatureRequestDetailPage() {
-  const params = useParams<{ id: string }>();
-  const id = params.id;
+  const params = useParams<{ id: string; frId: string }>();
+  const projectId = params.id;
+  const id = params.frId;
 
   // Poll the request itself while it's still being worked (clarifying → drafting)
   // so the status transitions (and the indicator label) update live.
@@ -115,7 +116,7 @@ export default function FeatureRequestDetailPage() {
       {/* Top bar: back only */}
       <div className="flex items-center justify-between">
         <Link
-          href="/dashboard/feature-requests"
+          href={`/dashboard/projects/${projectId}/feature-requests`}
           className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-sm transition-colors"
         >
           <ArrowLeft className="size-4" />
@@ -195,7 +196,7 @@ export default function FeatureRequestDetailPage() {
         </div>
       )}
 
-      <PrdSection featureRequestId={id} status={status} />
+      <PrdSection featureRequestId={id} projectId={projectId} status={status} />
 
       {/* Composer — pinned to the bottom of the viewport like ChatGPT */}
       {featureRequest && isClarifying ? (

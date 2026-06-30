@@ -31,10 +31,12 @@ class TaskService {
   }
 
   public async listTasks(payload: ListTasksInputType) {
-    const { organizationId, featureRequestId } = await listTasksInput.parseAsync(payload);
+    const { organizationId, featureRequestId, projectId } =
+      await listTasksInput.parseAsync(payload);
 
     const conditions = [eq(tasksTable.organizationId, organizationId)];
     if (featureRequestId) conditions.push(eq(tasksTable.featureRequestId, featureRequestId));
+    if (projectId) conditions.push(eq(tasksTable.projectId, projectId));
 
     const tasks = await db
       .select()

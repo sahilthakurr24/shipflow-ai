@@ -16,8 +16,9 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { useGetPullRequestById, useListPullRequestFiles } from "~/hooks/api/pull-request";
 
 export default function PullRequestDetailPage() {
-  const params = useParams<{ id: string }>();
-  const id = params.id;
+  const params = useParams<{ id: string; prId: string }>();
+  const projectId = params.id;
+  const id = params.prId;
 
   const { pullRequest, isLoading, refetch } = useGetPullRequestById({ id });
   const { files } = useListPullRequestFiles(pullRequest ? { pullRequestId: id } : skipToken);
@@ -48,7 +49,7 @@ export default function PullRequestDetailPage() {
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       <Link
-        href="/dashboard/pull-requests"
+        href={`/dashboard/projects/${projectId}/pull-requests`}
         className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-sm transition-colors"
       >
         <ArrowLeft className="size-4" />

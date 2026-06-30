@@ -49,6 +49,7 @@ class UserService {
     return { user: result };
   }
 
+
   public async updateUser(payload: UpdateUserInputType) {
     const { id, fullName, profileImageUrl } = await updateUserInput.parseAsync(payload);
 

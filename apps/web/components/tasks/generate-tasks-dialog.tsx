@@ -29,12 +29,14 @@ export function GenerateTasksDialog({
   open,
   onOpenChange,
   organizationId,
+  projectId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   organizationId: string;
+  projectId?: string;
 }) {
-  const { prds } = useListPrds(open ? { organizationId } : skipToken);
+  const { prds } = useListPrds(open ? { organizationId, projectId } : skipToken);
   const { generateTasksAsync, isPending } = useGenerateTasks();
   const [prdId, setPrdId] = React.useState<string | undefined>();
 

@@ -85,6 +85,17 @@ class InvivationService {
     return { invitation };
   }
 
+  public async getInvitationById(payload: InvitationId) {
+    const { id } = await invitationIdInput.parseAsync(payload);
+
+    const [invitation] = await db
+      .select()
+      .from(invitationsTable)
+      .where(eq(invitationsTable.id, id));
+
+    return { invitation };
+  }
+
   public async acceptInvitation(payload: AcceptInvitation) {
     const { token, userId } = await acceptInvitationInput.parseAsync(payload);
 
