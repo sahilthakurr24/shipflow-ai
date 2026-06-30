@@ -91,7 +91,7 @@ export function NavUser({ user }: { user: { name: string; email: string; avatar:
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem asChild>
-                <Link href="/dashboard/settings">
+                <Link href="/dashboard/account">
                   <BadgeCheck />
                   Account
                 </Link>
