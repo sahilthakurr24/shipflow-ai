@@ -44,6 +44,7 @@ export const pullRequestsTable = pgTable(
     headBranch: varchar("head_branch", { length: 255 }),
     baseBranch: varchar("base_branch", { length: 255 }),
     headSha: varchar("head_sha", { length: 64 }),
+    headCommitMessage: text("head_commit_message"),
     htmlUrl: text("html_url"),
     additions: integer("additions").notNull().default(0),
     deletions: integer("deletions").notNull().default(0),

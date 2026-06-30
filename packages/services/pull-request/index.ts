@@ -115,6 +115,7 @@ class PullRequestService {
             headBranch: sql`excluded.head_branch`,
             baseBranch: sql`excluded.base_branch`,
             headSha: sql`excluded.head_sha`,
+            headCommitMessage: sql`excluded.head_commit_message`,
             htmlUrl: sql`excluded.html_url`,
             additions: sql`excluded.additions`,
             deletions: sql`excluded.deletions`,

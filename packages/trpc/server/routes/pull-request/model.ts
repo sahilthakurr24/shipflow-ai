@@ -37,6 +37,7 @@ export const pullRequestSchema = z.object({
   headBranch: z.string().nullable(),
   baseBranch: z.string().nullable(),
   headSha: z.string().nullable(),
+  headCommitMessage: z.string().nullable(),
   htmlUrl: z.string().nullable(),
   additions: z.number(),
   deletions: z.number(),

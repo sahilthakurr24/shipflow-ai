@@ -4,7 +4,9 @@ import type { RouterOutputs } from "@repo/trpc/client";
 import { Badge } from "~/components/ui/badge";
 import { cn } from "~/lib/utils";
 
-export type PullRequest = NonNullable<RouterOutputs["pullRequest"]["getPullRequestById"]["pullRequest"]>;
+export type PullRequest = NonNullable<
+  RouterOutputs["pullRequest"]["getPullRequestById"]["pullRequest"]
+>;
 export type PullRequestFile = RouterOutputs["pullRequest"]["listPullRequestFiles"]["files"][number];
 export type Review = RouterOutputs["review"]["listReviews"]["reviews"][number];
 export type ReviewIssue = RouterOutputs["review"]["listReviewIssues"]["issues"][number];
@@ -13,12 +15,29 @@ export type Approval = RouterOutputs["approval"]["listApprovals"]["approvals"][n
 export type PrState = PullRequest["state"];
 export type Verdict = NonNullable<Review["verdict"]>;
 
-const PR_STATE_META: Record<PrState, { label: string; icon: typeof CircleDot; className: string }> = {
-  open: { label: "Open", icon: CircleDot, className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
-  merged: { label: "Merged", icon: GitMerge, className: "border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-400" },
-  closed: { label: "Closed", icon: GitPullRequestClosed, className: "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400" },
-  draft: { label: "Draft", icon: GitPullRequestDraft, className: "border-zinc-400/30 bg-zinc-400/10 text-zinc-500 dark:text-zinc-400" },
-};
+const PR_STATE_META: Record<PrState, { label: string; icon: typeof CircleDot; className: string }> =
+  {
+    open: {
+      label: "Open",
+      icon: CircleDot,
+      className: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    },
+    merged: {
+      label: "Merged",
+      icon: GitMerge,
+      className: "border-violet-500/30 bg-violet-500/10 text-violet-600 dark:text-violet-400",
+    },
+    closed: {
+      label: "Closed",
+      icon: GitPullRequestClosed,
+      className: "border-red-500/30 bg-red-500/10 text-red-600 dark:text-red-400",
+    },
+    draft: {
+      label: "Draft",
+      icon: GitPullRequestDraft,
+      className: "border-zinc-400/30 bg-zinc-400/10 text-zinc-500 dark:text-zinc-400",
+    },
+  };
 
 export function PrStateBadge({ state }: { state: PrState }) {
   const meta = PR_STATE_META[state] ?? PR_STATE_META.open;
@@ -33,14 +52,35 @@ export function PrStateBadge({ state }: { state: PrState }) {
 
 const VERDICT_META: Record<Verdict, { label: string; className: string }> = {
   approved: { label: "Approved", className: "bg-emerald-600 text-white hover:bg-emerald-600" },
-  changes_requested: { label: "Changes requested", className: "bg-red-600 text-white hover:bg-red-600" },
+  changes_requested: {
+    label: "Changes requested",
+    className: "bg-red-600 text-white hover:bg-red-600",
+  },
   commented: { label: "Commented", className: "bg-amber-500 text-white hover:bg-amber-500" },
-  needs_human_review: { label: "Needs human review", className: "bg-zinc-500 text-white hover:bg-zinc-500" },
+  needs_human_review: {
+    label: "Needs human review",
+    className: "bg-zinc-500 text-white hover:bg-zinc-500",
+  },
 };
 
 export function VerdictBadge({ verdict }: { verdict: Verdict }) {
   const meta = VERDICT_META[verdict];
   return <Badge className={cn("gap-1", meta.className)}>{meta.label}</Badge>;
+}
+
+/** First 7 chars of a commit SHA, the GitHub-style short form. */
+export function shortSha(sha: string): string {
+  return sha.slice(0, 7);
+}
+
+/**
+ * Derive a commit's GitHub URL from the PR's html_url (…/pull/123 → …/commit/sha).
+ * Falls back to null when the PR url isn't a recognizable GitHub PR link.
+ */
+export function commitUrl(prHtmlUrl: string | null | undefined, sha: string | null | undefined) {
+  if (!prHtmlUrl || !sha) return null;
+  const match = prHtmlUrl.match(/^(https?:\/\/[^/]+\/[^/]+\/[^/]+)\/pull\/\d+/);
+  return match ? `${match[1]}/commit/${sha}` : null;
 }
 
 export function timeAgo(date: Date | string): string {

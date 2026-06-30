@@ -108,6 +108,21 @@ class GithubService {
       pull_number: pullNumber,
     });
 
+    // The PR payload only carries the head SHA, not the commit message. Fetch it
+    // separately so we can show "what was tested" in the UI. Never let a failure
+    // here block the snapshot — fall back to no message.
+    let headCommitMessage: string | undefined;
+    try {
+      const { data: commit } = await octokit.rest.repos.getCommit({
+        owner,
+        repo,
+        ref: pr.head.sha,
+      });
+      headCommitMessage = commit.commit.message;
+    } catch {
+      headCommitMessage = undefined;
+    }
+
     const pullRequest = {
       githubPrNumber: pr.number,
       githubPrId: String(pr.id),
@@ -119,6 +134,7 @@ class GithubService {
       headBranch: pr.head.ref,
       baseBranch: pr.base.ref,
       headSha: pr.head.sha,
+      headCommitMessage,
       htmlUrl: pr.html_url,
       additions: pr.additions,
       deletions: pr.deletions,

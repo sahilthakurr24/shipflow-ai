@@ -43,6 +43,13 @@
       "when": 1782727716384,
       "tag": "0005_goofy_whirlwind",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1782823019612,
+      "tag": "0006_yellow_garia",
+      "breakpoints": true
     }
   ]
 }

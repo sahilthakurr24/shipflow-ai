@@ -25,7 +25,10 @@ import { type PullRequest, timeAgo } from "./shared";
 
 const DECISION_META: Record<string, { label: string; className: string }> = {
   approved: { label: "Approved", className: "bg-emerald-600 text-white hover:bg-emerald-600" },
-  changes_requested: { label: "Changes requested", className: "bg-amber-500 text-white hover:bg-amber-500" },
+  changes_requested: {
+    label: "Changes requested",
+    className: "bg-amber-500 text-white hover:bg-amber-500",
+  },
   rejected: { label: "Rejected", className: "bg-red-600 text-white hover:bg-red-600" },
 };
 
@@ -94,7 +97,9 @@ export function PrApproval({
           <Select value={featureRequestId} onValueChange={link} disabled={isLinking}>
             <SelectTrigger>
               <SelectValue
-                placeholder={featureRequests.length ? "Link a feature request" : "No feature requests"}
+                placeholder={
+                  featureRequests.length ? "Link a feature request" : "No feature requests"
+                }
               >
                 {linkedFr?.title}
               </SelectValue>
@@ -108,8 +113,8 @@ export function PrApproval({
             </SelectContent>
           </Select>
           <p className="text-muted-foreground/70 text-xs">
-            Links the PR to its PRD so the AI review checks acceptance criteria — also required to
-            record an approval.
+            The AI review auto-links this PR to its PRD so it can check acceptance criteria. Change
+            it here if the match is wrong — a link is also required to record an approval.
           </p>
         </div>
 
@@ -130,7 +135,11 @@ export function PrApproval({
                 {isApproving ? <Loader2 className="animate-spin" /> : <Check className="size-4" />}
                 Approve
               </Button>
-              <Button variant="outline" onClick={() => decide("changes_requested")} disabled={isApproving}>
+              <Button
+                variant="outline"
+                onClick={() => decide("changes_requested")}
+                disabled={isApproving}
+              >
                 <X className="size-4" />
                 Request changes
               </Button>
@@ -151,9 +160,13 @@ export function PrApproval({
               const meta = DECISION_META[a.decision];
               return (
                 <div key={a.id} className="flex items-center gap-2 text-sm">
-                  <Badge className={cn("gap-1", meta?.className)}>{meta?.label ?? a.decision}</Badge>
+                  <Badge className={cn("gap-1", meta?.className)}>
+                    {meta?.label ?? a.decision}
+                  </Badge>
                   <span className="text-muted-foreground text-xs">{timeAgo(a.createdAt)}</span>
-                  {a.notes ? <span className="text-muted-foreground truncate text-xs">— {a.notes}</span> : null}
+                  {a.notes ? (
+                    <span className="text-muted-foreground truncate text-xs">— {a.notes}</span>
+                  ) : null}
                 </div>
               );
             })}

@@ -4,12 +4,12 @@ import * as React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { skipToken } from "@tanstack/react-query";
-import { ArrowLeft, ExternalLink, GitPullRequest } from "lucide-react";
+import { ArrowLeft, ExternalLink, GitCommitHorizontal, GitPullRequest } from "lucide-react";
 
 import { PrApproval } from "~/components/pull-request/pr-approval";
 import { PrFiles } from "~/components/pull-request/pr-files";
 import { PrReview } from "~/components/pull-request/pr-review";
-import { PrStateBadge, type Review } from "~/components/pull-request/shared";
+import { commitUrl, PrStateBadge, type Review, shortSha } from "~/components/pull-request/shared";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -20,8 +20,16 @@ export default function PullRequestDetailPage() {
   const projectId = params.id;
   const id = params.prId;
 
-  const { pullRequest, isLoading, refetch } = useGetPullRequestById({ id });
-  const { files } = useListPullRequestFiles(pullRequest ? { pullRequestId: id } : skipToken);
+  // Poll so a freshly-pushed commit (new headSha/message, changed files) shows up
+  // without a manual reload — the webhook re-snapshots the PR server-side.
+  const { pullRequest, isLoading, refetch } = useGetPullRequestById(
+    { id },
+    { refetchInterval: 5000, refetchOnWindowFocus: true },
+  );
+  const { files } = useListPullRequestFiles(pullRequest ? { pullRequestId: id } : skipToken, {
+    refetchInterval: 5000,
+    refetchOnWindowFocus: true,
+  });
 
   const [review, setReview] = React.useState<Review | undefined>();
   const onReviewLoaded = React.useCallback((r: Review | undefined) => setReview(r), []);
@@ -73,7 +81,9 @@ export default function PullRequestDetailPage() {
               {pullRequest.headBranch ?? "?"} → {pullRequest.baseBranch ?? "?"}
             </span>
             <span>
-              <span className="text-emerald-600 dark:text-emerald-400">+{pullRequest.additions}</span>{" "}
+              <span className="text-emerald-600 dark:text-emerald-400">
+                +{pullRequest.additions}
+              </span>{" "}
               <span className="text-red-600 dark:text-red-400">-{pullRequest.deletions}</span> ·{" "}
               {pullRequest.changedFilesCount} files
             </span>
@@ -86,6 +96,30 @@ export default function PullRequestDetailPage() {
               </Button>
             ) : null}
           </div>
+          {pullRequest.headSha ? (
+            <div className="text-muted-foreground flex min-w-0 items-center gap-1.5 text-xs">
+              <GitCommitHorizontal className="size-3.5 shrink-0" />
+              <span className="min-w-0 truncate">
+                {pullRequest.headCommitMessage?.split("\n")[0] ?? "Latest commit"}
+              </span>
+              {(() => {
+                const url = commitUrl(pullRequest.htmlUrl, pullRequest.headSha);
+                const sha = shortSha(pullRequest.headSha);
+                return url ? (
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="hover:text-foreground shrink-0 font-mono underline-offset-2 hover:underline"
+                  >
+                    {sha}
+                  </a>
+                ) : (
+                  <span className="shrink-0 font-mono">{sha}</span>
+                );
+              })()}
+            </div>
+          ) : null}
         </CardHeader>
         {pullRequest.body ? (
           <CardContent>
@@ -98,6 +132,8 @@ export default function PullRequestDetailPage() {
       <PrReview
         organizationId={organizationId}
         pullRequestId={id}
+        headSha={pullRequest.headSha}
+        prHtmlUrl={pullRequest.htmlUrl}
         onReviewLoaded={onReviewLoaded}
       />
 

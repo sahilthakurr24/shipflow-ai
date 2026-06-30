@@ -2,7 +2,14 @@
 
 import * as React from "react";
 import { skipToken } from "@tanstack/react-query";
-import { Check, Loader2, RefreshCw, ScanSearch, TriangleAlert } from "lucide-react";
+import {
+  Check,
+  GitCommitHorizontal,
+  Loader2,
+  RefreshCw,
+  ScanSearch,
+  TriangleAlert,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "~/components/ui/badge";
@@ -18,7 +25,7 @@ import { useRequestReview } from "~/hooks/api/pull-request";
 import { useUpdateReviewIssueStatus } from "~/hooks/api/review";
 import { cn } from "~/lib/utils";
 import { trpc } from "~/trpc/client";
-import { type Review, type ReviewIssue, VerdictBadge } from "./shared";
+import { commitUrl, type Review, type ReviewIssue, shortSha, VerdictBadge } from "./shared";
 
 const RUNNING = new Set(["queued", "running"]);
 const REVIEW_STEPS = [
@@ -53,10 +60,7 @@ function IssueRow({ issue }: { issue: ReviewIssue }) {
     <div className={cn("rounded-lg border p-3", muted && "opacity-60")}>
       <div className="flex items-start gap-2">
         <TriangleAlert
-          className={cn(
-            "mt-0.5 size-4 shrink-0",
-            blocking ? "text-red-500" : "text-amber-500",
-          )}
+          className={cn("mt-0.5 size-4 shrink-0", blocking ? "text-red-500" : "text-amber-500")}
         />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
@@ -147,10 +151,14 @@ function ReviewDisclaimer() {
 export function PrReview({
   organizationId,
   pullRequestId,
+  headSha,
+  prHtmlUrl,
   onReviewLoaded,
 }: {
   organizationId: string;
   pullRequestId: string;
+  headSha?: string | null;
+  prHtmlUrl?: string | null;
   onReviewLoaded?: (review: Review | undefined) => void;
 }) {
   // We requested a review and are waiting for Inngest to create + finish the new
@@ -184,8 +192,7 @@ export function PrReview({
     review ? { reviewId: review.id } : skipToken,
   );
   const issues = [...(issuesQuery.data?.issues ?? [])].sort(
-    (a, b) =>
-      (a.severity === "blocking" ? 0 : 1) - (b.severity === "blocking" ? 0 : 1),
+    (a, b) => (a.severity === "blocking" ? 0 : 1) - (b.severity === "blocking" ? 0 : 1),
   );
 
   const { requestReviewAsync, isPending: isRerunning } = useRequestReview();
@@ -194,6 +201,15 @@ export function PrReview({
   // the queued/running review. The action button stays disabled the entire time so
   // a review can't be re-triggered mid-run.
   const reviewing = isRunning || isRerunning || awaiting;
+
+  // The exact commit this review evaluated, and whether the PR has moved past it.
+  const reviewedSha = review?.reviewedSha ?? null;
+  const isStale =
+    !reviewing &&
+    review?.status === "completed" &&
+    reviewedSha != null &&
+    headSha != null &&
+    reviewedSha !== headSha;
 
   // Stop awaiting once a brand-new review has finished running.
   React.useEffect(() => {
@@ -230,6 +246,11 @@ export function PrReview({
           <ScanSearch className="size-4" />
           AI Review
           {review?.verdict && !reviewing ? <VerdictBadge verdict={review.verdict} /> : null}
+          {review && review.attempt > 1 && !reviewing ? (
+            <Badge variant="outline" className="rounded text-[11px] font-normal">
+              Attempt #{review.attempt}
+            </Badge>
+          ) : null}
           {reviewing ? (
             <Badge variant="secondary" className="gap-1">
               <Loader2 className="size-3 animate-spin" />
@@ -243,6 +264,15 @@ export function PrReview({
         </Button>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
+        {isStale ? (
+          <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">
+            <TriangleAlert className="mt-0.5 size-4 shrink-0" />
+            <p>
+              <span className="font-medium">New commits since this review.</span> This review ran
+              against an older commit — re-run to review the latest code.
+            </p>
+          </div>
+        ) : null}
         {reviewing ? (
           <ReviewingState queued={review?.status === "queued" || (isRerunning && !isRunning)} />
         ) : !review ? (
@@ -274,6 +304,30 @@ export function PrReview({
                 <Check className="size-4" />
                 No issues found.
               </p>
+            ) : null}
+
+            {review.status === "completed" && reviewedSha ? (
+              <div className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-xs">
+                <GitCommitHorizontal className="size-3.5 shrink-0" />
+                <span>Reviewed commit</span>
+                {(() => {
+                  const url = commitUrl(prHtmlUrl, reviewedSha);
+                  const sha = shortSha(reviewedSha);
+                  return url ? (
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="hover:text-foreground font-mono underline-offset-2 hover:underline"
+                    >
+                      {sha}
+                    </a>
+                  ) : (
+                    <span className="font-mono">{sha}</span>
+                  );
+                })()}
+                {review.model ? <span>· {review.model}</span> : null}
+              </div>
             ) : null}
 
             {review.status === "completed" ? <ReviewDisclaimer /> : null}

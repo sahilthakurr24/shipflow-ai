@@ -7,7 +7,7 @@ import { ChevronRight, Loader2, ScanSearch, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import type { RouterOutputs } from "@repo/trpc/client";
 
-import { VerdictBadge, timeAgo } from "~/components/pull-request/shared";
+import { shortSha, VerdictBadge, timeAgo } from "~/components/pull-request/shared";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,7 +56,9 @@ function ReviewRow({ review, pr, projectId }: { review: Review; pr?: Pr; project
         <div className="grid min-w-0 flex-1 gap-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="truncate font-medium">{pr ? pr.title : "Pull request"}</span>
-            {pr ? <span className="text-muted-foreground text-xs">#{pr.githubPrNumber}</span> : null}
+            {pr ? (
+              <span className="text-muted-foreground text-xs">#{pr.githubPrNumber}</span>
+            ) : null}
             {review.verdict ? <VerdictBadge verdict={review.verdict} /> : null}
             {review.status !== "completed" ? (
               <Badge variant="secondary" className="capitalize">
@@ -65,8 +67,13 @@ function ReviewRow({ review, pr, projectId }: { review: Review; pr?: Pr; project
             ) : null}
           </div>
           <span className="text-muted-foreground line-clamp-1 text-xs">
+            Attempt #{review.attempt} ·{" "}
             {review.readinessScore != null ? `Readiness ${review.readinessScore}/100 · ` : ""}
             {review.blockingCount} blocking · {review.nonBlockingCount} non-blocking ·{" "}
+            {review.reviewedSha ? (
+              <span className="font-mono">{shortSha(review.reviewedSha)}</span>
+            ) : null}
+            {review.reviewedSha ? " · " : ""}
             {timeAgo(review.createdAt)}
           </span>
         </div>

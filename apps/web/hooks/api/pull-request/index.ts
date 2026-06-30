@@ -19,11 +19,18 @@ export function useListPullRequests(
   };
 }
 
+type QueryOptions = {
+  refetchInterval?: number | false;
+  refetchOnWindowFocus?: boolean;
+  enabled?: boolean;
+};
+
 export function useGetPullRequestById(
   input: Parameters<typeof trpc.pullRequest.getPullRequestById.useQuery>[0],
+  options?: QueryOptions,
 ) {
   const { data, error, isFetched, isFetching, isLoading, refetch, status } =
-    trpc.pullRequest.getPullRequestById.useQuery(input);
+    trpc.pullRequest.getPullRequestById.useQuery(input, options);
   return {
     pullRequest: data?.pullRequest,
     error,
@@ -37,9 +44,10 @@ export function useGetPullRequestById(
 
 export function useListPullRequestFiles(
   input: Parameters<typeof trpc.pullRequest.listPullRequestFiles.useQuery>[0],
+  options?: QueryOptions,
 ) {
   const { data, error, isFetched, isFetching, isLoading, refetch, status } =
-    trpc.pullRequest.listPullRequestFiles.useQuery(input);
+    trpc.pullRequest.listPullRequestFiles.useQuery(input, options);
   return { files: data?.files ?? [], error, isFetched, isFetching, isLoading, refetch, status };
 }
 

@@ -1,8 +1,10 @@
 import { createState } from "@inngest/agent-kit";
 import { NonRetriableError } from "inngest";
 import { createCodeReviewerAgent } from "../agents/code-reviewer";
+import { createPrdMatcherAgent } from "../agents/prd-matcher";
 import { inngest } from "../client";
-import { prdService, pullRequestService, reviewService } from "../services";
+import { CODE_REVIEW_MODEL } from "../models";
+import { featureRequestService, prdService, pullRequestService, reviewService } from "../services";
 import { runTrackedWorkflow } from "../utils/workflow-run";
 
 type AiReviewState = {
@@ -11,12 +13,24 @@ type AiReviewState = {
   readinessScore?: number;
 };
 
+type PrdMatchState = {
+  featureRequestId?: string;
+};
+
 type PullRequest = {
   title: string;
   body: string | null;
   baseBranch: string | null;
   headBranch: string | null;
+  headSha: string | null;
+  repositoryId: string;
   featureRequestId: string | null;
+};
+
+type FeatureRequestCandidate = {
+  id: string;
+  title: string;
+  description: string | null;
 };
 type PullRequestFile = {
   filename: string;
@@ -131,6 +145,37 @@ Changed files:
 ${filesText}`;
 }
 
+function buildMatchPrompt(
+  pullRequest: PullRequest,
+  files: PullRequestFile[],
+  candidates: FeatureRequestCandidate[],
+) {
+  // Only the file paths — enough signal to match intent without paying for the
+  // full diff in this cheap classification step.
+  const pathsText = files.length
+    ? files.map((f) => `- ${f.filename}`).join("\n")
+    : "(no changed files)";
+
+  const candidatesText = candidates
+    .map(
+      (c, i) =>
+        `${i + 1}. id: ${c.id}\n   title: ${c.title}\n   description: ${c.description ?? "(none)"}`,
+    )
+    .join("\n");
+
+  return `Pull request: ${pullRequest.title}
+Body: ${pullRequest.body ?? "(none)"}
+Head branch: ${pullRequest.headBranch ?? "unknown"}
+
+Changed file paths:
+${pathsText}
+
+Candidate feature requests (each has a PRD):
+${candidatesText}
+
+Pick the ONE candidate this PR implements, or null if none clearly matches.`;
+}
+
 export const aiReviewFunction = inngest.createFunction(
   { id: "ai-review", triggers: [{ event: "pull-request/review.requested" }] },
   async ({ event, step }) => {
@@ -149,14 +194,59 @@ export const aiReviewFunction = inngest.createFunction(
         pullRequestService.listPullRequestFiles({ pullRequestId }),
       );
 
+      // Resolve which feature request (and thus PRD) grounds this review. A human
+      // link on the PR always wins; otherwise auto-match against the repo's
+      // feature requests that have a PRD, then persist the pick so it shows in the
+      // UI and approval works.
+      let featureRequestId = pullRequest.featureRequestId ?? undefined;
+
+      if (!featureRequestId) {
+        const { featureRequests } = await step.run("list-feature-requests", () =>
+          featureRequestService.listFeatureRequests({ organizationId }),
+        );
+        const { prds: orgPrds } = await step.run("list-org-prds", () =>
+          prdService.listPrds({ organizationId }),
+        );
+        const prdFeatureRequestIds = new Set(orgPrds.map((p) => p.featureRequestId));
+
+        // Only same-repo feature requests that actually have a PRD are reviewable
+        // targets.
+        const candidates: FeatureRequestCandidate[] = featureRequests
+          .filter(
+            (fr) => fr.repositoryId === pullRequest.repositoryId && prdFeatureRequestIds.has(fr.id),
+          )
+          .map((fr) => ({ id: fr.id, title: fr.title, description: fr.description }));
+
+        if (candidates.length === 1) {
+          // No ambiguity — skip the LLM call.
+          featureRequestId = candidates[0]!.id;
+        } else if (candidates.length > 1) {
+          const matchState = createState<PrdMatchState>();
+          await createPrdMatcherAgent().run(buildMatchPrompt(pullRequest, files, candidates), {
+            state: matchState,
+            step,
+            maxIter: 1,
+          });
+          const picked = matchState.data.featureRequestId;
+          // Trust only an id the model copied from the candidate list.
+          if (picked && candidates.some((c) => c.id === picked)) {
+            featureRequestId = picked;
+          }
+        }
+
+        if (featureRequestId) {
+          await step.run("link-feature-request", () =>
+            pullRequestService.updatePullRequest({ id: pullRequestId, featureRequestId }),
+          );
+        }
+      }
+
       let prdId: string | undefined;
       let acceptanceCriteria: AcceptanceCriterion[] = [];
       let userStories: UserStories[] = [];
       let mainPrd: PRD = null;
 
-      if (pullRequest.featureRequestId) {
-        const featureRequestId = pullRequest.featureRequestId;
-
+      if (featureRequestId) {
         const { prds } = await step.run("list-prds-for-feature-request", () =>
           prdService.listPrds({ organizationId, featureRequestId }),
         );
@@ -179,14 +269,24 @@ export const aiReviewFunction = inngest.createFunction(
         }
       }
 
+      // Number this run so re-reviews are distinguishable in the UI.
+      const { reviews: existingReviews } = await step.run("count-existing-reviews", () =>
+        reviewService.listReviews({ organizationId, pullRequestId }),
+      );
+
       const { id: reviewId } = await step.run("create-review", () =>
         reviewService.createReview({
           organizationId,
           pullRequestId,
-          featureRequestId: pullRequest.featureRequestId ?? undefined,
+          featureRequestId,
           prdId,
           trigger: "manual",
           status: "running",
+          attempt: existingReviews.length + 1,
+          model: CODE_REVIEW_MODEL,
+          // Pin the review to the exact commit it evaluated so the UI can detect
+          // when newer commits have landed since (stale review).
+          reviewedSha: pullRequest.headSha ?? undefined,
         }),
       );
       if (!reviewId) throw new Error("Failed to create review");
