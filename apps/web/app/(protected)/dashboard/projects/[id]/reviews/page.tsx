@@ -9,10 +9,9 @@ import { VerdictBadge, timeAgo } from "~/components/pull-request/shared";
 import { Badge } from "~/components/ui/badge";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { Skeleton } from "~/components/ui/skeleton";
-import { useListPullRequests } from "~/hooks/api/pull-request";
-import { useListReviews } from "~/hooks/api/review";
 import { useListRepositories } from "~/hooks/api/repository";
 import { useOrganization } from "~/providers/organization";
+import { trpc } from "~/trpc/client";
 
 export default function ProjectReviewsPage() {
   const { activeOrgId } = useOrganization();
@@ -23,11 +22,27 @@ export default function ProjectReviewsPage() {
   );
   const repoId = repositories.find((r) => r.projectId === projectId)?.id;
 
-  const scoped = activeOrgId && repoId ? { organizationId: activeOrgId, repositoryId: repoId } : undefined;
-  const { reviews, isLoading, error } = useListReviews(scoped ?? skipToken);
-  const { pullRequests } = useListPullRequests(scoped ?? skipToken);
+  const scoped =
+    activeOrgId && repoId ? { organizationId: activeOrgId, repositoryId: repoId } : undefined;
+
+  // Poll so newly-created reviews (and re-run attempts) appear without a manual
+  // refresh — global queries are staleTime: Infinity so they don't refetch on
+  // their own.
+  const reviewsQuery = trpc.review.listReviews.useQuery(scoped ?? skipToken, {
+    refetchInterval: 4000,
+    refetchOnWindowFocus: true,
+  });
+  const prsQuery = trpc.pullRequest.listPullRequests.useQuery(scoped ?? skipToken, {
+    refetchInterval: 4000,
+  });
+
+  const reviews = reviewsQuery.data?.reviews ?? [];
+  const isLoading = reviewsQuery.isLoading;
+  const error = reviewsQuery.error;
+  const pullRequests = prsQuery.data?.pullRequests ?? [];
 
   const prById = new Map(pullRequests.map((pr) => [pr.id, pr] as const));
+  // Every review record (each attempt), newest first.
   const sorted = [...reviews].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );

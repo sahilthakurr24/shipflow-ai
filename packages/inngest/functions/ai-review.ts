@@ -27,11 +27,43 @@ type PullRequestFile = {
 };
 type AcceptanceCriterion = { id: string; description: string };
 
+type UserStories = {
+  id: string;
+  prdId: string;
+  asA: string | null;
+  iWant: string | null;
+  soThat: string | null;
+  narrative: string | null;
+  orderIndex: number;
+};
+
+type PRD = {
+  id: string;
+  version: number;
+  organizationId: string;
+  featureRequestId: string;
+  status: "approved" | "draft" | "generating" | "ready" | "archived";
+  createdAt: string;
+  updatedAt: string;
+  title: string;
+  problemStatement: string | null;
+  goals: string[];
+  nonGoals: string[];
+  edgeCases: string[];
+  assumptions: string[];
+  successMetrics: string[];
+  generatedByModel: string | null;
+  approvedByUserId: string | null;
+  approvedAt: string | null;
+} | null;
+
 function buildPrompt(
   pullRequest: PullRequest,
   files: PullRequestFile[],
   hasPrd: boolean,
   acceptanceCriteria: AcceptanceCriterion[],
+  userStories: UserStories[],
+  prd: PRD,
 ) {
   const filesText = files.length
     ? files
@@ -44,15 +76,53 @@ function buildPrompt(
         .join("\n\n")
     : "(no changed files)";
 
+  const bullets = (items: string[] | null | undefined) =>
+    items && items.length ? items.map((i) => `- ${i}`).join("\n") : "(none)";
+
+  const prdText =
+    hasPrd && prd
+      ? `Title: ${prd.title}
+Problem statement: ${prd.problemStatement ?? "(none)"}
+Goals:
+${bullets(prd.goals)}
+Non-goals (OUT of scope — flag any change that does these):
+${bullets(prd.nonGoals)}
+Edge cases:
+${bullets(prd.edgeCases)}
+Assumptions:
+${bullets(prd.assumptions)}
+Success metrics:
+${bullets(prd.successMetrics)}`
+      : "(no PRD linked to this pull request)";
+
+  const userStoryText = hasPrd
+    ? userStories.length
+      ? userStories
+          .map((s) =>
+            s.asA || s.iWant || s.soThat
+              ? `- As a ${s.asA ?? "user"}, I want ${s.iWant ?? "…"}, so that ${s.soThat ?? "…"}.`
+              : `- ${s.narrative ?? "(empty)"}`,
+          )
+          .join("\n")
+      : "(PRD has no user stories recorded)"
+    : "(no PRD linked to this pull request)";
+
   const criteriaText = hasPrd
     ? acceptanceCriteria.length
       ? acceptanceCriteria.map((c) => `- [${c.id}] ${c.description}`).join("\n")
       : "(PRD has no acceptance criteria recorded)"
     : "(no PRD linked to this pull request)";
 
+  // Ordered intent → specifics → diff so the model reads top-down.
   return `Pull request: ${pullRequest.title}
 Body: ${pullRequest.body ?? "(none)"}
 Base branch: ${pullRequest.baseBranch ?? "unknown"} <- Head branch: ${pullRequest.headBranch ?? "unknown"}
+
+PRD (what this change is meant to implement):
+${prdText}
+
+User stories:
+${userStoryText}
 
 Acceptance criteria:
 ${criteriaText}
@@ -81,6 +151,8 @@ export const aiReviewFunction = inngest.createFunction(
 
       let prdId: string | undefined;
       let acceptanceCriteria: AcceptanceCriterion[] = [];
+      let userStories: UserStories[] = [];
+      let mainPrd: PRD = null;
 
       if (pullRequest.featureRequestId) {
         const featureRequestId = pullRequest.featureRequestId;
@@ -92,11 +164,18 @@ export const aiReviewFunction = inngest.createFunction(
 
         if (prd) {
           prdId = prd.id;
+          mainPrd = prd;
 
           const result = await step.run("list-acceptance-criteria", () =>
             prdService.listAcceptanceCriteria({ prdId: prd.id }),
           );
           acceptanceCriteria = result.acceptanceCriteria;
+
+          const result2 = await step.run("list-user-stories", () =>
+            prdService.listUserStories({ prdId: prd.id }),
+          );
+
+          userStories = result2.userStories;
         }
       }
 
@@ -117,11 +196,14 @@ export const aiReviewFunction = inngest.createFunction(
       // maxIter: 1 — the reviewer submits the whole review in a single forced
       // submit_review call, so there is no second inference (which agent-kit would
       // send without the tool-result message, causing an OpenAI 400).
-      await agent.run(buildPrompt(pullRequest, files, Boolean(prdId), acceptanceCriteria), {
-        state,
-        step,
-        maxIter: 1,
-      });
+      await agent.run(
+        buildPrompt(pullRequest, files, Boolean(prdId), acceptanceCriteria, userStories, mainPrd),
+        {
+          state,
+          step,
+          maxIter: 1,
+        },
+      );
 
       if (!state.data.verdict) {
         await step.run("fallback-needs-human-review", () =>
