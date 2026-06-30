@@ -21,6 +21,13 @@ import { trpc } from "~/trpc/client";
 import { type Review, type ReviewIssue, VerdictBadge } from "./shared";
 
 const RUNNING = new Set(["queued", "running"]);
+const REVIEW_STEPS = [
+  "Reading the changed files…",
+  "Comparing the diff against the PRD goals and non-goals…",
+  "Checking the change against each acceptance criterion…",
+  "Scanning for correctness, edge-case and security issues…",
+  "Writing up the findings…",
+] as const;
 const ISSUE_STATUSES = ["open", "resolved", "wont_fix", "ignored"] as const;
 const ISSUE_STATUS_LABEL: Record<string, string> = {
   open: "Open",
@@ -102,6 +109,41 @@ function IssueRow({ issue }: { issue: ReviewIssue }) {
   );
 }
 
+function ReviewingState({ queued }: { queued: boolean }) {
+  const [step, setStep] = React.useState(0);
+  React.useEffect(() => {
+    const t = setInterval(() => setStep((p) => (p + 1) % REVIEW_STEPS.length), 2500);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center gap-3 py-6 text-center">
+      <Loader2 className="text-muted-foreground size-6 animate-spin" />
+      <div className="space-y-1">
+        <p className="text-sm font-medium">
+          {queued ? "Queued for review…" : "Reviewing your code…"}
+        </p>
+        <p className="text-muted-foreground text-sm" aria-live="polite">
+          {queued ? "Starting the AI reviewer." : REVIEW_STEPS[step]}
+        </p>
+      </div>
+      <p className="text-muted-foreground/70 max-w-sm text-xs leading-relaxed">
+        This usually takes under a minute. The AI review can make mistakes — treat it as a first
+        pass, not a replacement for human judgement.
+      </p>
+    </div>
+  );
+}
+
+function ReviewDisclaimer() {
+  return (
+    <p className="text-muted-foreground/60 flex items-start gap-1.5 border-t pt-3 text-xs leading-relaxed">
+      <TriangleAlert className="mt-0.5 size-3 shrink-0" />
+      AI-generated review — it can be incomplete or wrong. A human still approves before this ships.
+    </p>
+  );
+}
+
 export function PrReview({
   organizationId,
   pullRequestId,
@@ -111,6 +153,13 @@ export function PrReview({
   pullRequestId: string;
   onReviewLoaded?: (review: Review | undefined) => void;
 }) {
+  // We requested a review and are waiting for Inngest to create + finish the new
+  // review row. The row is created asynchronously, so right after the request the
+  // latest review is still the OLD completed one — we must keep polling and show
+  // the reviewing state until a newer review appears and completes.
+  const [awaiting, setAwaiting] = React.useState(false);
+  const prevReviewIdRef = React.useRef<string | undefined>(undefined);
+
   const reviewsQuery = trpc.review.listReviews.useQuery(
     { organizationId, pullRequestId },
     {
@@ -118,7 +167,10 @@ export function PrReview({
         const latest = [...(q.state.data?.reviews ?? [])].sort(
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
         )[0];
-        return latest && RUNNING.has(latest.status) ? 3000 : false;
+        if (latest && RUNNING.has(latest.status)) return 2000;
+        // Keep polling while we wait for the freshly-requested review to appear.
+        if (awaiting) return 2000;
+        return false;
       },
     },
   );
@@ -138,13 +190,35 @@ export function PrReview({
 
   const { requestReviewAsync, isPending: isRerunning } = useRequestReview();
   const isRunning = review ? RUNNING.has(review.status) : false;
+  // Covers the whole in-flight window: the request, the wait for the new row, and
+  // the queued/running review. The action button stays disabled the entire time so
+  // a review can't be re-triggered mid-run.
+  const reviewing = isRunning || isRerunning || awaiting;
+
+  // Stop awaiting once a brand-new review has finished running.
+  React.useEffect(() => {
+    if (!awaiting || !review) return;
+    if (review.id !== prevReviewIdRef.current && !RUNNING.has(review.status)) {
+      setAwaiting(false);
+    }
+  }, [awaiting, review]);
+
+  // Safety net: never spin forever if the review never materializes.
+  React.useEffect(() => {
+    if (!awaiting) return;
+    const t = setTimeout(() => setAwaiting(false), 120000);
+    return () => clearTimeout(t);
+  }, [awaiting]);
 
   async function rerun() {
+    prevReviewIdRef.current = review?.id;
+    setAwaiting(true);
     try {
       await requestReviewAsync({ id: pullRequestId });
       toast.success("AI review requested");
       await reviewsQuery.refetch();
     } catch (error) {
+      setAwaiting(false);
       toast.error(error instanceof Error ? error.message : "Failed to request review");
     }
   }
@@ -155,21 +229,23 @@ export function PrReview({
         <CardTitle className="flex items-center gap-2 text-base">
           <ScanSearch className="size-4" />
           AI Review
-          {review?.verdict ? <VerdictBadge verdict={review.verdict} /> : null}
-          {isRunning ? (
+          {review?.verdict && !reviewing ? <VerdictBadge verdict={review.verdict} /> : null}
+          {reviewing ? (
             <Badge variant="secondary" className="gap-1">
               <Loader2 className="size-3 animate-spin" />
-              {review?.status === "queued" ? "Queued" : "Reviewing"}
+              {review?.status === "queued" || (isRerunning && !isRunning) ? "Queued" : "Reviewing"}
             </Badge>
           ) : null}
         </CardTitle>
-        <Button variant="outline" size="sm" onClick={rerun} disabled={isRerunning || isRunning}>
-          {isRerunning ? <Loader2 className="animate-spin" /> : <RefreshCw className="size-4" />}
-          {review ? "Re-run" : "Run AI review"}
+        <Button variant="outline" size="sm" onClick={rerun} disabled={reviewing}>
+          {reviewing ? <Loader2 className="animate-spin" /> : <RefreshCw className="size-4" />}
+          {reviewing ? "Reviewing…" : review ? "Re-run" : "Run AI review"}
         </Button>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        {!review ? (
+        {reviewing ? (
+          <ReviewingState queued={review?.status === "queued" || (isRerunning && !isRunning)} />
+        ) : !review ? (
           <p className="text-muted-foreground/70 text-sm italic">
             No review yet. Run the AI review to check this diff against the PRD.
           </p>
@@ -185,11 +261,7 @@ export function PrReview({
               </div>
             ) : null}
 
-            {review.summary ? (
-              <p className="text-sm leading-relaxed">{review.summary}</p>
-            ) : isRunning ? (
-              <p className="text-muted-foreground text-sm">The reviewer is analyzing the diff…</p>
-            ) : null}
+            {review.summary ? <p className="text-sm leading-relaxed">{review.summary}</p> : null}
 
             {issues.length ? (
               <div className="flex flex-col gap-2">
@@ -203,6 +275,8 @@ export function PrReview({
                 No issues found.
               </p>
             ) : null}
+
+            {review.status === "completed" ? <ReviewDisclaimer /> : null}
           </>
         )}
       </CardContent>

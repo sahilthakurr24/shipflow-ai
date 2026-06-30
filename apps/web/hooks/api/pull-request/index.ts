@@ -110,7 +110,12 @@ export function useRequestReview() {
     status,
   } = trpc.pullRequest.requestReview.useMutation({
     onSuccess: async () => {
-      await utils.pullRequest.listPullRequests.invalidate();
+      await Promise.all([
+        utils.pullRequest.listPullRequests.invalidate(),
+        // The review row is created by Inngest shortly after; invalidate so the
+        // reviews list refetches and the polling picks up the new review.
+        utils.review.listReviews.invalidate(),
+      ]);
     },
   });
   return { requestReviewAsync, error, isError, isIdle, isPending, isSuccess, status };
