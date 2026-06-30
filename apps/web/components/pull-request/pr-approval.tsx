@@ -3,24 +3,15 @@
 import * as React from "react";
 import Link from "next/link";
 import { skipToken } from "@tanstack/react-query";
-import { ArrowUpRight, Check, Loader2, X } from "lucide-react";
+import { Check, Loader2, Rocket, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Label } from "~/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
 import { Textarea } from "~/components/ui/textarea";
-import { useListFeatureRequests } from "~/hooks/api/feature-request";
 import { useDecideApproval, useListApprovals } from "~/hooks/api/approval";
-import { useUpdatePullRequest } from "~/hooks/api/pull-request";
 import { cn } from "~/lib/utils";
 import { type PullRequest, timeAgo } from "./shared";
 
@@ -37,36 +28,19 @@ export function PrApproval({
   pullRequest,
   organizationId,
   projectId,
-  reviewId,
-  onLinked,
 }: {
   pullRequest: PullRequest;
   organizationId: string;
   projectId: string;
-  reviewId: string | undefined;
-  onLinked: () => void;
 }) {
   const featureRequestId = pullRequest.featureRequestId ?? undefined;
 
-  const { featureRequests } = useListFeatureRequests({ organizationId });
-  const { updatePullRequestAsync, isPending: isLinking } = useUpdatePullRequest();
-  const { decideApprovalAsync, isPending: isApproving } = useDecideApproval();
-  const { approvals, refetch: refetchApprovals } = useListApprovals(
+  const { approvals } = useListApprovals(
     featureRequestId ? { organizationId, featureRequestId } : skipToken,
   );
+  const { decideApprovalAsync, isPending: isApproving } = useDecideApproval();
 
   const [notes, setNotes] = React.useState("");
-  const linkedFr = featureRequests.find((f) => f.id === featureRequestId);
-
-  async function link(value: string) {
-    try {
-      await updatePullRequestAsync({ id: pullRequest.id, featureRequestId: value });
-      toast.success("Linked to feature request");
-      onLinked();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to link");
-    }
-  }
 
   async function decide(decision: "approved" | "changes_requested" | "rejected") {
     if (!featureRequestId) return;
@@ -75,10 +49,10 @@ export function PrApproval({
       await decideApprovalAsync({
         organizationId,
         featureRequestId,
-        reviewId,
         decision,
         notes: notes.trim() || undefined,
       });
+      setNotes("");
       toast.success(
         decision === "approved"
           ? "Approved"
@@ -86,8 +60,6 @@ export function PrApproval({
             ? "Rejected"
             : "Changes requested",
       );
-      setNotes("");
-      await refetchApprovals();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to record decision");
     }
@@ -99,35 +71,6 @@ export function PrApproval({
         <CardTitle className="text-base">Human approval</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        {/* Link feature request (grounds the review + required to approve) */}
-        <div className="flex flex-col gap-1.5">
-          <Label className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
-            Linked feature request
-          </Label>
-          <Select value={featureRequestId} onValueChange={link} disabled={isLinking}>
-            <SelectTrigger>
-              <SelectValue
-                placeholder={
-                  featureRequests.length ? "Link a feature request" : "No feature requests"
-                }
-              >
-                {linkedFr?.title}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {featureRequests.map((fr) => (
-                <SelectItem key={fr.id} value={fr.id}>
-                  {fr.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-muted-foreground/70 text-xs">
-            The AI review auto-links this PR to its PRD so it can check acceptance criteria. Change
-            it here if the match is wrong — a link is also required to record an approval.
-          </p>
-        </div>
-
         {featureRequestId ? (
           <>
             <Textarea
@@ -150,18 +93,26 @@ export function PrApproval({
                 onClick={() => decide("changes_requested")}
                 disabled={isApproving}
               >
-                <X className="size-4" />
                 Request changes
               </Button>
+              <Button
+                variant="outline"
+                onClick={() => decide("rejected")}
+                disabled={isApproving}
+                className="text-red-600 hover:text-red-600 dark:text-red-400"
+              >
+                <X className="size-4" />
+                Reject
+              </Button>
             </div>
-            {/* Approving only records the decision — shipping happens on the
-                feature's Review & Ship page, where the gate is enforced. */}
-            <Button asChild variant="outline" size="sm" className="self-start">
+            {/* Approving records the decision; shipping is gated and happens on the
+                feature's Review & Ship page. */}
+            <Button asChild variant="outline" className="self-start">
               <Link
                 href={`/dashboard/projects/${projectId}/feature-requests/${featureRequestId}/review`}
               >
-                Open Review &amp; Ship
-                <ArrowUpRight className="size-4" />
+                <Rocket className="size-4" />
+                Review &amp; Ship
               </Link>
             </Button>
           </>

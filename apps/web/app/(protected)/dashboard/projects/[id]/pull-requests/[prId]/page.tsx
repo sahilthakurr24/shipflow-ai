@@ -1,15 +1,15 @@
 "use client";
 
-import * as React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { skipToken } from "@tanstack/react-query";
 import { ArrowLeft, ExternalLink, GitCommitHorizontal, GitPullRequest } from "lucide-react";
 
 import { PrApproval } from "~/components/pull-request/pr-approval";
+import { PrFeatureLink } from "~/components/pull-request/pr-feature-link";
 import { PrFiles } from "~/components/pull-request/pr-files";
 import { PrReview } from "~/components/pull-request/pr-review";
-import { commitUrl, PrStateBadge, type Review, shortSha } from "~/components/pull-request/shared";
+import { commitUrl, PrStateBadge, shortSha } from "~/components/pull-request/shared";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -30,9 +30,6 @@ export default function PullRequestDetailPage() {
     refetchInterval: 5000,
     refetchOnWindowFocus: true,
   });
-
-  const [review, setReview] = React.useState<Review | undefined>();
-  const onReviewLoaded = React.useCallback((r: Review | undefined) => setReview(r), []);
 
   if (isLoading) {
     return (
@@ -128,13 +125,19 @@ export default function PullRequestDetailPage() {
         ) : null}
       </Card>
 
+      {/* Linked feature request — grounds the AI review, so it sits up top */}
+      <PrFeatureLink
+        pullRequest={pullRequest}
+        organizationId={organizationId}
+        onLinked={() => void refetch()}
+      />
+
       {/* AI review */}
       <PrReview
         organizationId={organizationId}
         pullRequestId={id}
         headSha={pullRequest.headSha}
         prHtmlUrl={pullRequest.htmlUrl}
-        onReviewLoaded={onReviewLoaded}
       />
 
       {/* Human approval */}
@@ -142,8 +145,6 @@ export default function PullRequestDetailPage() {
         pullRequest={pullRequest}
         organizationId={organizationId}
         projectId={projectId}
-        reviewId={review?.id}
-        onLinked={() => void refetch()}
       />
 
       {/* Files / diff */}

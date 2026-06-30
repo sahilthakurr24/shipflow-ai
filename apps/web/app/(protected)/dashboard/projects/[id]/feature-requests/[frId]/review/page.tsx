@@ -13,7 +13,6 @@ import {
   Loader2,
   Rocket,
   TriangleAlert,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { RouterOutputs } from "@repo/trpc/client";
@@ -26,8 +25,7 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Label } from "~/components/ui/label";
 import { Skeleton } from "~/components/ui/skeleton";
-import { Textarea } from "~/components/ui/textarea";
-import { useDecideApproval, useListApprovals } from "~/hooks/api/approval";
+import { useListApprovals } from "~/hooks/api/approval";
 import { useGetFeatureRequestById } from "~/hooks/api/feature-request";
 import { useShipRelease } from "~/hooks/api/release";
 import { useListTasks } from "~/hooks/api/task";
@@ -95,10 +93,7 @@ export default function FeatureReviewPage() {
   );
   const { approvals } = useListApprovals(scoped ?? skipToken);
 
-  const { decideApprovalAsync, isPending: isDeciding } = useDecideApproval();
   const { shipReleaseAsync, isPending: isShipping } = useShipRelease();
-
-  const [notes, setNotes] = React.useState("");
 
   if (isLoading) {
     return (
@@ -130,7 +125,6 @@ export default function FeatureReviewPage() {
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
   const latestApproval = sortedApprovals[0];
-  const latestReviewId = reviews[0]?.id;
 
   const isApproved = latestApproval?.decision === "approved";
   const isShipped = featureRequest.status === "shipped";
@@ -142,29 +136,6 @@ export default function FeatureReviewPage() {
       : outstandingCount > 0
         ? `${outstandingCount} blocking ${outstandingCount === 1 ? "issue" : "issues"} must be resolved first.`
         : null;
-
-  async function decide(decision: "approved" | "changes_requested" | "rejected") {
-    if (!organizationId) return;
-    try {
-      await decideApprovalAsync({
-        organizationId,
-        featureRequestId: frId,
-        decision,
-        reviewId: latestReviewId,
-        notes: notes.trim() || undefined,
-      });
-      setNotes("");
-      toast.success(
-        decision === "approved"
-          ? "Feature approved"
-          : decision === "rejected"
-            ? "Feature rejected"
-            : "Changes requested",
-      );
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to record decision");
-    }
-  }
 
   async function ship() {
     if (!organizationId) return;
@@ -301,46 +272,14 @@ export default function FeatureReviewPage() {
         )}
       </SectionCard>
 
-      {/* Decision & ship */}
+      {/* Ship — approve/reject the feature on the pull request page; this page
+          only performs the gated ship. */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Human decision &amp; ship</CardTitle>
+          <CardTitle className="text-base">Ship</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <Textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Decision notes (optional)…"
-            rows={2}
-          />
-          <div className="flex flex-wrap gap-2">
-            <Button
-              onClick={() => decide("approved")}
-              disabled={isDeciding || isShipped}
-              className="bg-emerald-600 text-white hover:bg-emerald-600/90"
-            >
-              {isDeciding ? <Loader2 className="animate-spin" /> : <Check className="size-4" />}
-              Approve
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => decide("changes_requested")}
-              disabled={isDeciding}
-            >
-              Request changes
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => decide("rejected")}
-              disabled={isDeciding}
-              className="text-red-600 hover:text-red-600 dark:text-red-400"
-            >
-              <X className="size-4" />
-              Reject
-            </Button>
-          </div>
-
-          <div className="flex flex-col gap-1.5 border-t pt-4">
+          <div className="flex flex-col gap-1.5">
             <Button
               onClick={ship}
               disabled={!canShip || isShipping}
