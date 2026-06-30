@@ -46,6 +46,30 @@ export function useCreateApproval() {
   return { createApprovalAsync, error, isError, isIdle, isPending, isSuccess, status };
 }
 
+// Records a decision AND transitions the feature's lifecycle status server-side,
+// so invalidate the feature request too (its status badge changes).
+export function useDecideApproval() {
+  const utils = trpc.useUtils();
+  const {
+    mutateAsync: decideApprovalAsync,
+    error,
+    isError,
+    isIdle,
+    isPending,
+    isSuccess,
+    status,
+  } = trpc.approval.decide.useMutation({
+    onSuccess: async () => {
+      await Promise.all([
+        utils.approval.listApprovals.invalidate(),
+        utils.featureRequest.getFeatureRequestById.invalidate(),
+        utils.featureRequest.listFeatureRequests.invalidate(),
+      ]);
+    },
+  });
+  return { decideApprovalAsync, error, isError, isIdle, isPending, isSuccess, status };
+}
+
 export function useDeleteApproval() {
   const utils = trpc.useUtils();
   const {

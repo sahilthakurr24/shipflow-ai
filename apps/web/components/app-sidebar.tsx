@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   Lightbulb,
   ListChecks,
+  Rocket,
   ScanSearch,
   Settings,
   Users,
@@ -59,6 +60,7 @@ function projectNav(projectId: string): NavItem[] {
     { title: "Tasks", url: `${base}/tasks`, icon: ListChecks },
     { title: "Pull Requests", url: `${base}/pull-requests`, icon: GitPullRequest },
     { title: "Reviews", url: `${base}/reviews`, icon: ScanSearch },
+    { title: "Releases", url: `${base}/releases`, icon: Rocket },
     { title: "Repository", url: `${base}/repository`, icon: FolderGit2 },
   ];
 }

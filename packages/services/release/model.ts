@@ -34,3 +34,15 @@ export const updateReleaseInput = z.object({
 });
 
 export type UpdateReleaseInputType = z.infer<typeof updateReleaseInput>;
+
+// Gated "ship" — the route enforces approval + zero outstanding blocking issues
+// before creating the shipped release.
+export const shipReleaseInput = z.object({
+  organizationId: z.uuid().describe("id of the organization"),
+  featureRequestId: z.uuid().describe("id of the feature request to ship"),
+  pullRequestId: z.uuid().optional(),
+  version: z.string().max(50).optional(),
+  releaseNotes: z.string().optional(),
+});
+
+export type ShipReleaseInputType = z.infer<typeof shipReleaseInput>;

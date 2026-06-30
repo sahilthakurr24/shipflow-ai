@@ -12,6 +12,7 @@ export {
   createReviewInput,
   reviewIdInput,
   listReviewsInput,
+  listOutstandingIssuesInput,
   updateReviewInput,
   createReviewIssueInput,
   listReviewIssuesInput,
@@ -68,4 +69,8 @@ export const reviewIssueSchema = z.object({
 
 export const createReviewIssueOutput = z.object({ id: z.string() });
 export const listReviewIssuesOutput = z.object({ issues: z.array(reviewIssueSchema) });
+export const listOutstandingIssuesOutput = z.object({
+  issues: z.array(reviewIssueSchema),
+  count: z.number(),
+});
 export const updateReviewIssueStatusOutput = z.object({ id: z.string().optional() });

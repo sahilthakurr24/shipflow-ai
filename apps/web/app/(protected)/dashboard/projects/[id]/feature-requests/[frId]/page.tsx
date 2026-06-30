@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Loader2, Send } from "lucide-react";
+import { ArrowLeft, Loader2, Rocket, Send } from "lucide-react";
 import { toast } from "sonner";
 
 import { PrdSection } from "~/components/feature-request/prd-section";
@@ -17,6 +17,18 @@ import { trpc } from "~/trpc/client";
 const CLARIFYING_STATUSES = new Set(["intake", "clarifying"]);
 // Status while the PRD is being written by the AI (no chat input yet).
 const GENERATING_PRD_STATUS = "prd_drafting";
+
+// Once a feature is past the PRD stage it can be reviewed & shipped.
+const REVIEWABLE_STATUSES = new Set([
+  "planning",
+  "ready_for_development",
+  "in_development",
+  "in_review",
+  "changes_requested",
+  "pending_approval",
+  "approved",
+  "shipped",
+]);
 
 // Rotating status lines shown while the PRD is being generated, so the wait
 // feels alive and the user knows roughly what's happening.
@@ -113,7 +125,7 @@ export default function FeatureRequestDetailPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6">
-      {/* Top bar: back only */}
+      {/* Top bar: back + (once past PRD) the review & ship entry point */}
       <div className="flex items-center justify-between">
         <Link
           href={`/dashboard/projects/${projectId}/feature-requests`}
@@ -122,6 +134,14 @@ export default function FeatureRequestDetailPage() {
           <ArrowLeft className="size-4" />
           Feature Requests
         </Link>
+        {status && REVIEWABLE_STATUSES.has(status) ? (
+          <Button asChild size="sm" variant="outline">
+            <Link href={`/dashboard/projects/${projectId}/feature-requests/${id}/review`}>
+              <Rocket className="size-4" />
+              Review &amp; Ship
+            </Link>
+          </Button>
+        ) : null}
       </div>
 
       {/* Chat */}

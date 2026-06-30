@@ -141,6 +141,7 @@ export default function PullRequestDetailPage() {
       <PrApproval
         pullRequest={pullRequest}
         organizationId={organizationId}
+        projectId={projectId}
         reviewId={review?.id}
         onLinked={() => void refetch()}
       />

@@ -44,6 +44,30 @@ export function useCreateRelease() {
   return { createReleaseAsync, error, isError, isIdle, isPending, isSuccess, status };
 }
 
+// Gated ship: creates the shipped release and flips the feature to `shipped`, so
+// invalidate releases + the feature request.
+export function useShipRelease() {
+  const utils = trpc.useUtils();
+  const {
+    mutateAsync: shipReleaseAsync,
+    error,
+    isError,
+    isIdle,
+    isPending,
+    isSuccess,
+    status,
+  } = trpc.release.ship.useMutation({
+    onSuccess: async () => {
+      await Promise.all([
+        utils.release.listReleases.invalidate(),
+        utils.featureRequest.getFeatureRequestById.invalidate(),
+        utils.featureRequest.listFeatureRequests.invalidate(),
+      ]);
+    },
+  });
+  return { shipReleaseAsync, error, isError, isIdle, isPending, isSuccess, status };
+}
+
 export function useUpdateRelease() {
   const utils = trpc.useUtils();
   const {

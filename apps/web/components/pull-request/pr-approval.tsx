@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { skipToken } from "@tanstack/react-query";
-import { Check, Loader2, X } from "lucide-react";
+import { ArrowUpRight, Check, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "~/components/ui/badge";
@@ -18,7 +19,7 @@ import {
 } from "~/components/ui/select";
 import { Textarea } from "~/components/ui/textarea";
 import { useListFeatureRequests } from "~/hooks/api/feature-request";
-import { useCreateApproval, useListApprovals } from "~/hooks/api/approval";
+import { useDecideApproval, useListApprovals } from "~/hooks/api/approval";
 import { useUpdatePullRequest } from "~/hooks/api/pull-request";
 import { cn } from "~/lib/utils";
 import { type PullRequest, timeAgo } from "./shared";
@@ -35,11 +36,13 @@ const DECISION_META: Record<string, { label: string; className: string }> = {
 export function PrApproval({
   pullRequest,
   organizationId,
+  projectId,
   reviewId,
   onLinked,
 }: {
   pullRequest: PullRequest;
   organizationId: string;
+  projectId: string;
   reviewId: string | undefined;
   onLinked: () => void;
 }) {
@@ -47,7 +50,7 @@ export function PrApproval({
 
   const { featureRequests } = useListFeatureRequests({ organizationId });
   const { updatePullRequestAsync, isPending: isLinking } = useUpdatePullRequest();
-  const { createApprovalAsync, isPending: isApproving } = useCreateApproval();
+  const { decideApprovalAsync, isPending: isApproving } = useDecideApproval();
   const { approvals, refetch: refetchApprovals } = useListApprovals(
     featureRequestId ? { organizationId, featureRequestId } : skipToken,
   );
@@ -65,17 +68,24 @@ export function PrApproval({
     }
   }
 
-  async function decide(decision: "approved" | "changes_requested") {
+  async function decide(decision: "approved" | "changes_requested" | "rejected") {
     if (!featureRequestId) return;
     try {
-      await createApprovalAsync({
+      // decide (not createApproval) so the feature's lifecycle status advances too.
+      await decideApprovalAsync({
         organizationId,
         featureRequestId,
         reviewId,
         decision,
         notes: notes.trim() || undefined,
       });
-      toast.success(decision === "approved" ? "Approved" : "Changes requested");
+      toast.success(
+        decision === "approved"
+          ? "Approved"
+          : decision === "rejected"
+            ? "Rejected"
+            : "Changes requested",
+      );
       setNotes("");
       await refetchApprovals();
     } catch (error) {
@@ -126,7 +136,7 @@ export function PrApproval({
               placeholder="Approval notes (optional)…"
               rows={2}
             />
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
                 onClick={() => decide("approved")}
                 disabled={isApproving}
@@ -144,6 +154,16 @@ export function PrApproval({
                 Request changes
               </Button>
             </div>
+            {/* Approving only records the decision — shipping happens on the
+                feature's Review & Ship page, where the gate is enforced. */}
+            <Button asChild variant="outline" size="sm" className="self-start">
+              <Link
+                href={`/dashboard/projects/${projectId}/feature-requests/${featureRequestId}/review`}
+              >
+                Open Review &amp; Ship
+                <ArrowUpRight className="size-4" />
+              </Link>
+            </Button>
           </>
         ) : (
           <p className="text-muted-foreground/70 text-sm italic">

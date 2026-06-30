@@ -5,6 +5,8 @@ import {
   CreateReviewInputType,
   createReviewIssueInput,
   CreateReviewIssueInputType,
+  listOutstandingIssuesInput,
+  ListOutstandingIssuesInputType,
   listReviewIssuesInput,
   ListReviewIssuesInputType,
   listReviewsInput,
@@ -40,11 +42,12 @@ class ReviewService {
   }
 
   public async listReviews(payload: ListReviewsInputType) {
-    const { organizationId, pullRequestId, repositoryId } =
+    const { organizationId, pullRequestId, featureRequestId, repositoryId } =
       await listReviewsInput.parseAsync(payload);
 
     const conditions = [eq(reviewsTable.organizationId, organizationId)];
     if (pullRequestId) conditions.push(eq(reviewsTable.pullRequestId, pullRequestId));
+    if (featureRequestId) conditions.push(eq(reviewsTable.featureRequestId, featureRequestId));
 
     // Scope to a repo via the PR (e.g. a project's connected repo).
     if (repositoryId) {
@@ -103,6 +106,32 @@ class ReviewService {
       .where(eq(reviewIssuesTable.reviewId, reviewId));
 
     return { issues };
+  }
+
+  /**
+   * Unresolved blocking issues across ALL of a feature's reviews — the ship gate
+   * signal. Joins issues to their review to scope by feature, then keeps only
+   * blocking issues still open. (The denormalized blockingCount can't be used: it
+   * counts issues regardless of their resolution status.)
+   */
+  public async listOutstandingIssues(payload: ListOutstandingIssuesInputType) {
+    const { organizationId, featureRequestId } =
+      await listOutstandingIssuesInput.parseAsync(payload);
+
+    const issues = await db
+      .select(getTableColumns(reviewIssuesTable))
+      .from(reviewIssuesTable)
+      .innerJoin(reviewsTable, eq(reviewIssuesTable.reviewId, reviewsTable.id))
+      .where(
+        and(
+          eq(reviewsTable.organizationId, organizationId),
+          eq(reviewsTable.featureRequestId, featureRequestId),
+          eq(reviewIssuesTable.severity, "blocking"),
+          eq(reviewIssuesTable.status, "open"),
+        ),
+      );
+
+    return { issues, count: issues.length };
   }
 
   public async getReviewIssueById(payload: ReviewIssueIdInputType) {

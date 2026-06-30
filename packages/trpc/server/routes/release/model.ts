@@ -6,6 +6,7 @@ export {
   releaseIdInput,
   listReleasesInput,
   updateReleaseInput,
+  shipReleaseInput,
 } from "@repo/services/release/model";
 
 export const releaseSchema = z.object({
@@ -24,6 +25,7 @@ export const releaseSchema = z.object({
 });
 
 export const createReleaseOutput = z.object({ id: z.string() });
+export const shipReleaseOutput = z.object({ id: z.string() });
 export const getReleaseOutput = z.object({ release: releaseSchema.optional() });
 export const listReleasesOutput = z.object({ releases: z.array(releaseSchema) });
 export const updateReleaseOutput = z.object({ id: z.string().optional() });

@@ -13,7 +13,11 @@ import {
 
 class ReleaseService {
   public async createRelease(payload: CreateReleaseInputType) {
-    const values = await createReleaseInput.parseAsync(payload);
+    const parsed = await createReleaseInput.parseAsync(payload);
+
+    // Stamp the ship time when a release is created already shipped (the gated
+    // ship action), mirroring updateRelease.
+    const values = parsed.status === "shipped" ? { ...parsed, shippedAt: new Date() } : parsed;
 
     const [result] = await db
       .insert(releasesTable)

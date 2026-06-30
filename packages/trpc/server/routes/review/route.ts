@@ -11,6 +11,8 @@ import {
   createReviewOutput,
   deleteReviewOutput,
   getReviewOutput,
+  listOutstandingIssuesInput,
+  listOutstandingIssuesOutput,
   listReviewIssuesInput,
   listReviewIssuesOutput,
   listReviewsInput,
@@ -134,6 +136,17 @@ export const reviewRouter = router({
       await assertOrgAccess(ctx.userId, review.organizationId);
 
       return reviewService.listReviewIssues(input);
+    }),
+
+  // Unresolved blocking issues across a feature's reviews — the ship gate signal.
+  listOutstandingIssues: authenticatedProcedure
+    .meta({ openapi: { method: "GET", path: getPath("/outstanding-issues"), tags: ISSUE_TAGS } })
+    .input(listOutstandingIssuesInput)
+    .output(listOutstandingIssuesOutput)
+    .query(async ({ ctx, input }) => {
+      await assertOrgAccess(ctx.userId, input.organizationId);
+
+      return reviewService.listOutstandingIssues(input);
     }),
 
   updateReviewIssueStatus: authenticatedProcedure

@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 
-import { approvalService } from "../../services";
+import { approvalService, featureRequestService } from "../../services";
 import { authenticatedProcedure, router } from "../../trpc";
 import { assertOrgAccess } from "../../utils/authz";
 import { generatePath } from "../../utils/path-generator";
@@ -18,6 +18,13 @@ const TAGS = ["Approvals"];
 const getPath = generatePath("/approvals");
 
 const MANAGE_ROLES = ["owner", "admin"] as const;
+
+// A human decision moves the feature along its lifecycle, not just the audit log.
+const DECISION_TO_STATUS = {
+  approved: "approved",
+  rejected: "rejected",
+  changes_requested: "changes_requested",
+} as const;
 
 export const approvalRouter = router({
   createApproval: authenticatedProcedure
@@ -37,6 +44,41 @@ export const approvalRouter = router({
           message: "Failed to record approval.",
         });
       }
+
+      return { id };
+    }),
+
+  // Record a human decision AND advance the feature's lifecycle status in one call.
+  // This is what the Review & Ship screen uses (createApproval stays audit-only).
+  decide: authenticatedProcedure
+    .meta({ openapi: { method: "POST", path: getPath("/decide"), tags: TAGS } })
+    .input(createApprovalInput)
+    .output(createApprovalOutput)
+    .mutation(async ({ ctx, input }) => {
+      await assertOrgAccess(ctx.userId, input.organizationId, MANAGE_ROLES);
+
+      const { featureRequest } = await featureRequestService.getFeatureRequestById({
+        id: input.featureRequestId,
+      });
+      if (!featureRequest) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Feature request not found." });
+      }
+
+      const { id } = await approvalService.createApproval({
+        ...input,
+        reviewerUserId: input.reviewerUserId ?? ctx.userId,
+      });
+      if (!id) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to record approval.",
+        });
+      }
+
+      await featureRequestService.updateFeatureRequest({
+        id: input.featureRequestId,
+        status: DECISION_TO_STATUS[input.decision],
+      });
 
       return { id };
     }),

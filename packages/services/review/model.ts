@@ -35,9 +35,16 @@ export type ReviewIdInputType = z.infer<typeof reviewIdInput>;
 export const listReviewsInput = z.object({
   organizationId: z.uuid().describe("id of the organization"),
   pullRequestId: z.uuid().optional(),
+  featureRequestId: z.uuid().optional().describe("scope to a feature request's reviews"),
   repositoryId: z.uuid().optional().describe("scope to a repo (via the PR), e.g. a project's repo"),
 });
 export type ListReviewsInputType = z.infer<typeof listReviewsInput>;
+
+export const listOutstandingIssuesInput = z.object({
+  organizationId: z.uuid().describe("id of the organization"),
+  featureRequestId: z.uuid().describe("id of the feature request"),
+});
+export type ListOutstandingIssuesInputType = z.infer<typeof listOutstandingIssuesInput>;
 
 export const updateReviewInput = z.object({
   id: z.uuid().describe("id of the review"),

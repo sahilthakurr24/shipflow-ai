@@ -316,6 +316,32 @@ export const aiReviewFunction = inngest.createFunction(
         );
       }
 
+      // The review is done — the feature now awaits a human decision. Advance it to
+      // `pending_approval` so it shows up in the reviewer's queue, but never stomp a
+      // human-set state (approved/shipped/rejected/changes_requested) already on it.
+      if (featureRequestId) {
+        await step.run("advance-feature-to-pending-approval", async () => {
+          const { featureRequest } = await featureRequestService.getFeatureRequestById({
+            id: featureRequestId,
+          });
+          const decided = new Set([
+            "pending_approval",
+            "approved",
+            "shipped",
+            "rejected",
+            "duplicate",
+            "changes_requested",
+          ]);
+          if (featureRequest && !decided.has(featureRequest.status)) {
+            await featureRequestService.updateFeatureRequest({
+              id: featureRequestId,
+              status: "pending_approval",
+            });
+          }
+          return { advanced: true };
+        });
+      }
+
       return { reviewId, verdict: state.data.verdict ?? "needs_human_review" };
     });
   },
