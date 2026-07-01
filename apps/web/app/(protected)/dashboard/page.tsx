@@ -15,7 +15,8 @@ import { useListRepositories } from "~/hooks/api/repository";
 import { useOrganization } from "~/providers/organization";
 
 export default function OverviewPage() {
-  const { activeOrgId } = useOrganization();
+  const { activeOrgId, activeOrg } = useOrganization();
+  const canManage = activeOrg?.role === "owner" || activeOrg?.role === "admin";
   const { projects, isLoading } = useListProjects(
     activeOrgId ? { organizationId: activeOrgId } : skipToken,
   );
@@ -38,10 +39,12 @@ export default function OverviewPage() {
             Each project owns one repository and its feature requests, PRDs, tasks, and pull requests.
           </p>
         </div>
-        <Button onClick={() => setCreateOpen(true)} disabled={!activeOrgId}>
-          <Plus className="size-4" />
-          New project
-        </Button>
+        {canManage ? (
+          <Button onClick={() => setCreateOpen(true)} disabled={!activeOrgId}>
+            <Plus className="size-4" />
+            New project
+          </Button>
+        ) : null}
       </header>
 
       {!activeOrgId ? (
@@ -60,15 +63,20 @@ export default function OverviewPage() {
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
             <FolderKanban className="text-muted-foreground size-7" />
-            <p className="font-medium">Create your first project</p>
-            <p className="text-muted-foreground max-w-sm text-sm">
-              A project connects one repository so your work stays organized and doesn&apos;t mix
-              across repos.
+            <p className="font-medium">
+              {canManage ? "Create your first project" : "No projects yet"}
             </p>
-            <Button onClick={() => setCreateOpen(true)}>
-              <Plus className="size-4" />
-              New project
-            </Button>
+            <p className="text-muted-foreground max-w-sm text-sm">
+              {canManage
+                ? "A project connects one repository so your work stays organized and doesn't mix across repos."
+                : "Ask an owner or admin of this organization to create a project."}
+            </p>
+            {canManage ? (
+              <Button onClick={() => setCreateOpen(true)}>
+                <Plus className="size-4" />
+                New project
+              </Button>
+            ) : null}
           </CardContent>
         </Card>
       ) : (

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { skipToken } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -10,13 +10,28 @@ import {
   GitPullRequest,
   Lightbulb,
   ListChecks,
+  Loader2,
   ScanSearch,
+  Trash2,
 } from "lucide-react";
+import { toast } from "sonner";
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "~/components/ui/alert-dialog";
 import { Badge } from "~/components/ui/badge";
-import { Card, CardHeader, CardTitle } from "~/components/ui/card";
+import { Button } from "~/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Skeleton } from "~/components/ui/skeleton";
-import { useGetProjectById } from "~/hooks/api/project";
+import { useDeleteProject, useGetProjectById } from "~/hooks/api/project";
 import { useListRepositories } from "~/hooks/api/repository";
 import { useOrganization } from "~/providers/organization";
 
@@ -31,13 +46,27 @@ const SECTIONS = [
 export default function ProjectWorkspacePage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
-  const { activeOrgId } = useOrganization();
+  const router = useRouter();
+  const { activeOrgId, activeOrg } = useOrganization();
+  const canManage = activeOrg?.role === "owner" || activeOrg?.role === "admin";
 
   const { project, isLoading } = useGetProjectById({ id });
   const { repositories } = useListRepositories(
     activeOrgId ? { organizationId: activeOrgId } : skipToken,
   );
   const repo = repositories.find((r) => r.projectId === id);
+
+  const { deleteProjectAsync, isPending: isDeleting } = useDeleteProject();
+
+  async function deleteProject() {
+    try {
+      await deleteProjectAsync({ id });
+      toast.success("Project deleted");
+      router.push("/dashboard");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to delete project");
+    }
+  }
 
   if (isLoading) {
     return (
@@ -108,6 +137,49 @@ export default function ProjectWorkspacePage() {
           );
         })}
       </div>
+
+      {canManage ? (
+        <Card className="border-destructive/30">
+          <CardHeader>
+            <CardTitle className="text-destructive text-base">Danger zone</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium">Delete this project</p>
+              <p className="text-muted-foreground text-sm">
+                Permanently removes the project and all of its feature requests, PRDs, tasks,
+                pull requests, and reviews. This can&apos;t be undone.
+              </p>
+            </div>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" disabled={isDeleting}>
+                  {isDeleting ? <Loader2 className="animate-spin" /> : <Trash2 className="size-4" />}
+                  Delete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete {project.name}?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This permanently deletes the project and everything in it — feature requests,
+                    PRDs, tasks, pull requests, and reviews. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={deleteProject}
+                    className="bg-destructive text-white hover:bg-destructive/90"
+                  >
+                    Delete project
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </CardContent>
+        </Card>
+      ) : null}
     </div>
   );
 }

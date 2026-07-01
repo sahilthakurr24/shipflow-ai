@@ -27,7 +27,7 @@ export const projectRouter = router({
     .input(createProjectInput)
     .output(createProjectOutput)
     .mutation(async ({ ctx, input }) => {
-      await assertOrgAccess(ctx.userId, input.organizationId);
+      await assertOrgAccess(ctx.userId, input.organizationId, MANAGE_ROLES);
       const { id } = await projectService.createProject(input);
 
       if (!id) {
