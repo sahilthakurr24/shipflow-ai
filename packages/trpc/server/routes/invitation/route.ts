@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 
-import { invitationService, organizationService, userService } from "../../services";
+import { billingService, invitationService, organizationService, userService } from "../../services";
 import { authenticatedProcedure, router } from "../../trpc";
 import { assertOrgAccess } from "../../utils/authz";
 import { generatePath } from "../../utils/path-generator";
@@ -29,6 +29,15 @@ export const invitationRouter = router({
     .output(createInvitationOutput)
     .mutation(async ({ ctx, input }) => {
       await assertOrgAccess(ctx.userId, input.organizationId, MANAGE_ROLES);
+
+      try {
+        await billingService.assertSeatCapacity({ organizationId: input.organizationId });
+      } catch (error) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: error instanceof Error ? error.message : "Seat limit reached.",
+        });
+      }
 
       // invitedByUserId is the authenticated inviter, never the client.
       return invitationService.createInvitation({ ...input, invitedByUserId: ctx.userId });
@@ -77,6 +86,21 @@ export const invitationRouter = router({
     .input(acceptInvitationInput)
     .output(acceptInvitationOutput)
     .mutation(async ({ ctx, input }) => {
+      // Defense in depth: seats could have filled up between when this invite
+      // was sent and now (other invites accepted in the meantime), so re-check
+      // capacity right before the membership is actually created.
+      const { invitation } = await invitationService.getInvitationByToken({ token: input.token });
+      if (invitation) {
+        try {
+          await billingService.assertSeatCapacity({ organizationId: invitation.organizationId });
+        } catch (error) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: error instanceof Error ? error.message : "Seat limit reached.",
+          });
+        }
+      }
+
       // The accepting user is always the session user (email-bound in the service).
       return invitationService.acceptInvitation({ token: input.token, userId: ctx.userId });
     }),

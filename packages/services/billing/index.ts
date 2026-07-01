@@ -1,8 +1,10 @@
 import { and, db, eq, sql } from "@repo/database";
 import {
+  invitationsTable,
   membershipsTable,
   paymentsTable,
   plansTable,
+  repositoriesTable,
   subscriptionsTable,
   usageRecordsTable,
   usersTable,
@@ -155,6 +157,66 @@ class BillingService {
         featureRequestId,
       });
     });
+  }
+
+  /**
+   * Throws if connecting `additionalCount` more repos would push the org over
+   * `repositoryLimit`. Unlike AI review credits, this is a live `COUNT(*)`
+   * against `repositoriesTable` rather than a denormalized counter — repo
+   * capacity is persistent (no per-cycle reset), and disconnecting a repo should
+   * immediately free up room without any separate decrement logic.
+   */
+  public async assertRepositoryCapacity(payload: {
+    organizationId: string;
+    additionalCount: number;
+  }) {
+    const { organizationId, additionalCount } = payload;
+    const subscription = await this.getOrCreateSubscription(organizationId);
+
+    const [row] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(repositoriesTable)
+      .where(eq(repositoriesTable.organizationId, organizationId));
+    const count = row?.count ?? 0;
+
+    if (count + additionalCount > subscription.repositoryLimit) {
+      throw new Error(
+        `This organization is limited to ${subscription.repositoryLimit} repositories. Upgrade your plan to connect more.`,
+      );
+    }
+  }
+
+  /**
+   * Throws if the org has no seats left. "Used" = current members + pending
+   * invitations, so a burst of invite acceptances can't blow past `seats` even
+   * though no membership row exists yet for a pending invite.
+   */
+  public async assertSeatCapacity(payload: BillingOrganizationInputType) {
+    const { organizationId } = await billingOrganizationInput.parseAsync(payload);
+    const subscription = await this.getOrCreateSubscription(organizationId);
+
+    const [memberRow] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(membershipsTable)
+      .where(eq(membershipsTable.organizationId, organizationId));
+
+    const [pendingRow] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(invitationsTable)
+      .where(
+        and(
+          eq(invitationsTable.organizationId, organizationId),
+          eq(invitationsTable.status, "pending"),
+        ),
+      );
+
+    const used = (memberRow?.count ?? 0) + (pendingRow?.count ?? 0);
+
+    if (used >= subscription.seats) {
+      throw new Error(
+        `This organization is limited to ${subscription.seats} seats. Upgrade your plan to invite more members.`,
+      );
+    }
   }
 
   /** Every Razorpay SDK call goes through here so a plain-object rejection (the SDK's

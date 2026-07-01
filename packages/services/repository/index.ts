@@ -1,4 +1,4 @@
-import { db, eq, sql } from "@repo/database";
+import { and, db, eq, inArray, sql } from "@repo/database";
 import { repositoriesTable } from "@repo/database/schema";
 import {
   createRepositoryInput,
@@ -60,6 +60,31 @@ class RepositoryService {
     const { id } = await repositoryIdInput.parseAsync(payload);
 
     await db.delete(repositoriesTable).where(eq(repositoriesTable.id, id));
+  }
+
+  /**
+   * Of `githubRepoIds`, how many aren't already connected for this org — i.e.
+   * how many would actually be *new* if upserted. Re-syncing already-connected
+   * repos doesn't count against a repository-limit check, only genuine growth
+   * does.
+   */
+  public async countNewRepositories(payload: { organizationId: string; githubRepoIds: string[] }) {
+    const { organizationId, githubRepoIds } = payload;
+
+    if (githubRepoIds.length === 0) return { newCount: 0 };
+
+    const existing = await db
+      .select({ githubRepoId: repositoriesTable.githubRepoId })
+      .from(repositoriesTable)
+      .where(
+        and(
+          eq(repositoriesTable.organizationId, organizationId),
+          inArray(repositoriesTable.githubRepoId, githubRepoIds),
+        ),
+      );
+    const existingIds = new Set(existing.map((r) => r.githubRepoId));
+
+    return { newCount: githubRepoIds.filter((id) => !existingIds.has(id)).length };
   }
 
   /** Upsert the repositories granted to a GitHub App installation. */

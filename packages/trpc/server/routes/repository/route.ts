@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 
-import { githubService, repositoryService } from "../../services";
+import { billingService, githubService, repositoryService } from "../../services";
 import { authenticatedProcedure, router } from "../../trpc";
 import { assertOrgAccess } from "../../utils/authz";
 import { generatePath } from "../../utils/path-generator";
@@ -105,6 +105,23 @@ export const repositoryRouter = router({
       const { repositories } = await githubService.listInstallationRepositories({
         installationId: input.installationId,
       });
+
+      const { newCount } = await repositoryService.countNewRepositories({
+        organizationId: input.organizationId,
+        githubRepoIds: repositories.map((r) => r.githubRepoId),
+      });
+
+      try {
+        await billingService.assertRepositoryCapacity({
+          organizationId: input.organizationId,
+          additionalCount: newCount,
+        });
+      } catch (error) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: error instanceof Error ? error.message : "Repository limit reached.",
+        });
+      }
 
       return repositoryService.upsertFromInstallation({
         organizationId: input.organizationId,
