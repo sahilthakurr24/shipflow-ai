@@ -10,6 +10,9 @@ const envSchema = z.object({
     .string()
     .describe("GitHub App private key (PEM, newlines escaped as \\n)"),
   GITHUB_WEBHOOK_SECRET: z.string().describe("Secret used to verify inbound GitHub webhooks"),
+  RAZORPAY_KEY_ID: z.string().describe("Razorpay API key id (test mode: rzp_test_...)"),
+  RAZORPAY_KEY_SECRET: z.string().describe("Razorpay API key secret"),
+  RAZORPAY_WEBHOOK_SECRET: z.string().describe("Secret used to verify inbound Razorpay webhooks"),
 });
 
 function createEnv(env: NodeJS.ProcessEnv) {

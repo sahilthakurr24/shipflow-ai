@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { inngest } from "@repo/inngest";
 
-import { githubService, pullRequestService, repositoryService } from "../../services";
+import { billingService, githubService, pullRequestService, repositoryService } from "../../services";
 import { authenticatedProcedure, router } from "../../trpc";
 import { assertOrgAccess } from "../../utils/authz";
 import { generatePath } from "../../utils/path-generator";
@@ -119,6 +119,15 @@ export const pullRequestRouter = router({
       }
 
       await assertOrgAccess(ctx.userId, pullRequest.organizationId);
+
+      try {
+        await billingService.assertAiReviewCredits({ organizationId: pullRequest.organizationId });
+      } catch (error) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: error instanceof Error ? error.message : "AI review credit limit reached.",
+        });
+      }
 
       await inngest.send({
         name: "pull-request/review.requested",

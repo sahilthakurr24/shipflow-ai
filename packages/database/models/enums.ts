@@ -44,6 +44,8 @@ export const usageMetricEnum = pgEnum("usage_metric", [
   "feature_request",
 ]);
 
+export const billingPeriodEnum = pgEnum("billing_period", ["daily", "weekly", "monthly", "yearly"]);
+
 // ---------------------------------------------------------------------------
 // Product discovery
 // ---------------------------------------------------------------------------
@@ -214,4 +216,4 @@ export const workflowStatusEnum = pgEnum("workflow_status", [
   "canceled",
 ]);
 
-export const webhookProviderEnum = pgEnum("webhook_provider", ["github"]);
+export const webhookProviderEnum = pgEnum("webhook_provider", ["github", "razorpay"]);

@@ -48,3 +48,52 @@ export function useListUsageRecords(
     status,
   };
 }
+
+export function useListPlans() {
+  const { data, error, isFetched, isFetching, isLoading, refetch, status } =
+    trpc.billing.listPlans.useQuery(undefined);
+  return {
+    plans: data?.plans ?? [],
+    error,
+    isFetched,
+    isFetching,
+    isLoading,
+    refetch,
+    status,
+  };
+}
+
+// mutations
+export function useCreateCheckoutSubscription() {
+  const utils = trpc.useUtils();
+  const {
+    mutateAsync: createCheckoutSubscriptionAsync,
+    error,
+    isError,
+    isPending,
+    isSuccess,
+    status,
+  } = trpc.billing.createCheckoutSubscription.useMutation({
+    onSuccess: async () => {
+      await utils.billing.getSubscription.invalidate();
+    },
+  });
+  return { createCheckoutSubscriptionAsync, error, isError, isPending, isSuccess, status };
+}
+
+export function useCancelSubscription() {
+  const utils = trpc.useUtils();
+  const {
+    mutateAsync: cancelSubscriptionAsync,
+    error,
+    isError,
+    isPending,
+    isSuccess,
+    status,
+  } = trpc.billing.cancelSubscription.useMutation({
+    onSuccess: async () => {
+      await utils.billing.getSubscription.invalidate();
+    },
+  });
+  return { cancelSubscriptionAsync, error, isError, isPending, isSuccess, status };
+}

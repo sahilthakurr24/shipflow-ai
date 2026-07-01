@@ -26,6 +26,19 @@ export const recordGithubDeliveryInput = z.object({
 
 export type RecordGithubDeliveryInputType = z.infer<typeof recordGithubDeliveryInput>;
 
+export const recordRazorpayDeliveryInput = z.object({
+  deliveryId: z.string().max(120).optional().describe("Razorpay webhook event id (payload.id)"),
+  eventType: z.string().max(80).describe("Razorpay event type, e.g. subscription.activated"),
+  razorpaySubscriptionId: z
+    .string()
+    .max(120)
+    .optional()
+    .describe("payload.payload.subscription.entity.id, used to resolve the organization"),
+  payload: jsonObject,
+});
+
+export type RecordRazorpayDeliveryInputType = z.infer<typeof recordRazorpayDeliveryInput>;
+
 export const webhookEventIdInput = z.object({ id: z.uuid().describe("id of the webhook event") });
 export type WebhookEventIdInputType = z.infer<typeof webhookEventIdInput>;
 

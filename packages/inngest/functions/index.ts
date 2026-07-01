@@ -5,6 +5,7 @@ import { requirementClarificationFunction } from "./requirement-clarification";
 import { taskGenerationFunction } from "./task-generation";
 import { githubWebhookFunction } from "./github-webhook";
 import { githubPullRequestFunction } from "./github-pull-request";
+import { razorpayWebhookFunction } from "./razorpay-webhook";
 
 export const functions = [
   helloWorld,
@@ -14,4 +15,5 @@ export const functions = [
   aiReviewFunction,
   githubWebhookFunction,
   githubPullRequestFunction,
+  razorpayWebhookFunction,
 ];

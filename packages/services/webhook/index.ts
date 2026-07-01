@@ -1,5 +1,5 @@
 import { db, eq } from "@repo/database";
-import { repositoriesTable, webhookEventsTable } from "@repo/database/schema";
+import { repositoriesTable, subscriptionsTable, webhookEventsTable } from "@repo/database/schema";
 import {
   createWebhookEventInput,
   CreateWebhookEventInputType,
@@ -7,6 +7,8 @@ import {
   ListWebhookEventsInputType,
   recordGithubDeliveryInput,
   RecordGithubDeliveryInputType,
+  recordRazorpayDeliveryInput,
+  RecordRazorpayDeliveryInputType,
   webhookEventIdInput,
   WebhookEventIdInputType,
 } from "./model";
@@ -69,6 +71,48 @@ class WebhookService {
       return {
         id: inserted?.id,
         repositoryId,
+        organizationId,
+        duplicate: !inserted,
+      };
+    });
+  }
+
+  /**
+   * Atomically record an inbound Razorpay delivery: resolve the org from the
+   * subscription the event references (no repo lookup needed, unlike GitHub), then
+   * insert the event. `onConflictDoNothing` on `deliveryId` (Razorpay's own event id)
+   * makes redeliveries idempotent (returns `duplicate: true` instead of erroring).
+   */
+  public async recordRazorpayDelivery(input: RecordRazorpayDeliveryInputType) {
+    const { deliveryId, eventType, razorpaySubscriptionId, payload } =
+      await recordRazorpayDeliveryInput.parseAsync(input);
+
+    return db.transaction(async (tx) => {
+      let organizationId: string | undefined;
+
+      if (razorpaySubscriptionId) {
+        const [subscription] = await tx
+          .select({ organizationId: subscriptionsTable.organizationId })
+          .from(subscriptionsTable)
+          .where(eq(subscriptionsTable.razorpaySubscriptionId, razorpaySubscriptionId));
+
+        organizationId = subscription?.organizationId;
+      }
+
+      const [inserted] = await tx
+        .insert(webhookEventsTable)
+        .values({
+          provider: "razorpay",
+          deliveryId,
+          eventType,
+          organizationId,
+          payload,
+        })
+        .onConflictDoNothing({ target: webhookEventsTable.deliveryId })
+        .returning({ id: webhookEventsTable.id });
+
+      return {
+        id: inserted?.id,
         organizationId,
         duplicate: !inserted,
       };

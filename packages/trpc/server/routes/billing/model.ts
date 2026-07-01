@@ -1,13 +1,16 @@
 import z from "zod";
 import {
   billingOrganizationInput,
+  billingPeriodSchema,
+  cancelSubscriptionInput,
+  createCheckoutSubscriptionInput,
   paymentStatusSchema,
   planTierSchema,
   subscriptionStatusSchema,
   usageMetricSchema,
 } from "@repo/services/billing/model";
 
-export { billingOrganizationInput };
+export { billingOrganizationInput, cancelSubscriptionInput, createCheckoutSubscriptionInput };
 
 const jsonObject = z.record(z.string(), z.unknown());
 
@@ -60,3 +63,28 @@ export const usageRecordSchema = z.object({
 export const getSubscriptionOutput = z.object({ subscription: subscriptionSchema.optional() });
 export const listPaymentsOutput = z.object({ payments: z.array(paymentSchema) });
 export const listUsageRecordsOutput = z.object({ usageRecords: z.array(usageRecordSchema) });
+
+export const createCheckoutSubscriptionOutput = z.object({
+  razorpaySubscriptionId: z.string(),
+  razorpayKeyId: z.string(),
+});
+export const cancelSubscriptionOutput = z.object({ subscription: subscriptionSchema.optional() });
+
+export const planSchema = z.object({
+  id: z.string(),
+  tier: planTierSchema,
+  name: z.string(),
+  description: z.string().nullable(),
+  amount: z.number().nullable(),
+  currency: z.string(),
+  period: billingPeriodSchema,
+  intervalCount: z.number(),
+  seats: z.number(),
+  repositoryLimit: z.number(),
+  aiReviewCreditsTotal: z.number(),
+  razorpayPlanId: z.string().nullable(),
+  isActive: z.boolean(),
+  createdAt: z.date(),
+  updatedAt: z.date(),
+});
+export const listPlansOutput = z.object({ plans: z.array(planSchema) });

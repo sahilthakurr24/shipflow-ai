@@ -4,7 +4,13 @@ import { createCodeReviewerAgent } from "../agents/code-reviewer";
 import { createPrdMatcherAgent } from "../agents/prd-matcher";
 import { inngest } from "../client";
 import { CODE_REVIEW_MODEL } from "../models";
-import { featureRequestService, prdService, pullRequestService, reviewService } from "../services";
+import {
+  billingService,
+  featureRequestService,
+  prdService,
+  pullRequestService,
+  reviewService,
+} from "../services";
 import { runTrackedWorkflow } from "../utils/workflow-run";
 
 type AiReviewState = {
@@ -184,6 +190,20 @@ export const aiReviewFunction = inngest.createFunction(
       organizationId: string;
     };
 
+    // Blocks before any review row (or workflow-run row) is created, so an org
+    // over its quota doesn't accumulate phantom "running" reviews. This is the
+    // only check for the webhook-auto-triggered path — the tRPC `requestReview`
+    // mutation checks separately, up front, for a faster user-facing rejection.
+    try {
+      await step.run("check-ai-review-credits", () =>
+        billingService.assertAiReviewCredits({ organizationId }),
+      );
+    } catch (error) {
+      throw new NonRetriableError(
+        error instanceof Error ? error.message : "AI review credit limit reached.",
+      );
+    }
+
     return runTrackedWorkflow(step, { organizationId, type: "ai_review" }, async () => {
       const { pullRequest } = await step.run("get-pull-request", () =>
         pullRequestService.getPullRequestById({ id: pullRequestId }),
@@ -296,6 +316,8 @@ export const aiReviewFunction = inngest.createFunction(
       // maxIter: 1 — the reviewer submits the whole review in a single forced
       // submit_review call, so there is no second inference (which agent-kit would
       // send without the tool-result message, causing an OpenAI 400).
+
+
       await agent.run(
         buildPrompt(pullRequest, files, Boolean(prdId), acceptanceCriteria, userStories, mainPrd),
         {
@@ -315,6 +337,12 @@ export const aiReviewFunction = inngest.createFunction(
           }),
         );
       }
+
+      // The review ran (whether it reached a verdict or fell back to
+      // needs_human_review) — either way it consumed one AI review credit.
+      await step.run("record-ai-review-usage", () =>
+        billingService.recordAiReviewUsage({ organizationId, reviewId, featureRequestId }),
+      );
 
       // The review is done — the feature now awaits a human decision. Advance it to
       // `pending_approval` so it shows up in the reviewer's queue, but never stomp a

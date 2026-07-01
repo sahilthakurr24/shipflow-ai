@@ -11,7 +11,13 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
-import { paymentStatusEnum, planTierEnum, subscriptionStatusEnum, usageMetricEnum } from "./enums";
+import {
+  billingPeriodEnum,
+  paymentStatusEnum,
+  planTierEnum,
+  subscriptionStatusEnum,
+  usageMetricEnum,
+} from "./enums";
 import { featureRequestsTable } from "./feature-request";
 import { timestamps } from "./helpers";
 import { organizationsTable } from "./organization";
@@ -98,9 +104,40 @@ export const usageRecordsTable = pgTable(
   ],
 );
 
+/**
+ * Our own source of truth for pricing/limits per plan tier. The Razorpay Plan
+ * object (`razorpayPlanId`) is a lazily-created cache underneath this row, not
+ * the config source — created once via `plans.create()` the first time a
+ * checkout needs it, never by hand in the Razorpay dashboard. To change a
+ * price, edit `amount` here and null out `razorpayPlanId` to force a fresh
+ * Razorpay Plan to be created next checkout.
+ */
+export const plansTable = pgTable(
+  "plans",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    tier: planTierEnum("tier").notNull(),
+    name: varchar("name", { length: 80 }).notNull(),
+    description: text("description"),
+    amount: integer("amount"), // paise; null = no fixed price (enterprise = "contact us")
+    currency: varchar("currency", { length: 8 }).notNull().default("INR"),
+    period: billingPeriodEnum("period").notNull().default("monthly"),
+    intervalCount: integer("interval_count").notNull().default(1),
+    seats: integer("seats").notNull(),
+    repositoryLimit: integer("repository_limit").notNull(),
+    aiReviewCreditsTotal: integer("ai_review_credits_total").notNull(),
+    razorpayPlanId: varchar("razorpay_plan_id", { length: 120 }),
+    isActive: boolean("is_active").notNull().default(true),
+    ...timestamps,
+  },
+  (t) => [uniqueIndex("plans_tier_unique").on(t.tier)],
+);
+
 export type SelectSubscription = typeof subscriptionsTable.$inferSelect;
 export type InsertSubscription = typeof subscriptionsTable.$inferInsert;
 export type SelectPayment = typeof paymentsTable.$inferSelect;
 export type InsertPayment = typeof paymentsTable.$inferInsert;
 export type SelectUsageRecord = typeof usageRecordsTable.$inferSelect;
 export type InsertUsageRecord = typeof usageRecordsTable.$inferInsert;
+export type SelectPlan = typeof plansTable.$inferSelect;
+export type InsertPlan = typeof plansTable.$inferInsert;

@@ -70,11 +70,13 @@ export const prdGenerationFunction = inngest.createFunction(
         // maxIter: 1 — the agent writes the whole PRD in a single forced
         // create_prd call, so there is no second inference (which agent-kit would
         // send without the tool-result message, causing an OpenAI 400).
-        await agent.run(buildPrompt(featureRequest, messages, repoContext), {
+       await agent.run(buildPrompt(featureRequest, messages, repoContext), {
           state,
           step,
           maxIter: 1,
         });
+
+  
 
         if (!state.data.prdId) throw new Error("PRD writer agent did not create a PRD");
 
